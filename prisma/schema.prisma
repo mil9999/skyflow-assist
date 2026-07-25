@@ -1,0 +1,96 @@
+// SkyFlow Assist - Phase 1 schema
+// SQLite has no native enums, so status fields are strings validated in src/domain/constants.ts
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Passenger {
+  id        String    @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String?
+  bookings  Booking[]
+  createdAt DateTime  @default(now())
+}
+
+model Flight {
+  id             String          @id @default(cuid())
+  flightNumber   String          @unique
+  origin         String // IATA code, e.g. LHR
+  destination    String // IATA code, e.g. CDG
+  departureTime  DateTime
+  arrivalTime    DateTime
+  availableSeats Int             @default(0)
+  stops          Int             @default(0)
+  connectionVia  String?
+  status         String          @default("SCHEDULED") // SCHEDULED | DELAYED | CANCELLED | DEPARTED
+  bookings       Booking[]
+  disruptions    Disruption[]
+  holds          RebookingHold[]
+  createdAt      DateTime        @default(now())
+}
+
+model Booking {
+  id               String                @id @default(cuid())
+  bookingReference String                @unique
+  passengerId      String
+  flightId         String
+  seatNumber       String?
+  status           String                @default("ACTIVE") // ACTIVE | DISRUPTED | HELD | REBOOKED | CANCELLED
+  passenger        Passenger             @relation(fields: [passengerId], references: [id])
+  flight           Flight                @relation(fields: [flightId], references: [id])
+  holds            RebookingHold[]
+  sessions         ConversationSession[]
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+}
+
+model Disruption {
+  id        String   @id @default(cuid())
+  flightId  String
+  type      String // CANCELLATION | DELAY
+  reason    String
+  flight    Flight   @relation(fields: [flightId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model RebookingHold {
+  id          String   @id @default(cuid())
+  bookingId   String
+  newFlightId String
+  status      String   @default("ACTIVE") // ACTIVE | CONFIRMED | EXPIRED | CANCELLED
+  expiresAt   DateTime
+  booking     Booking  @relation(fields: [bookingId], references: [id])
+  newFlight   Flight   @relation(fields: [newFlightId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model ConversationSession {
+  id        String       @id @default(cuid())
+  bookingId String?
+  // UNVERIFIED | VERIFIED | BOOKING_LOADED | OPTIONS_PRESENTED
+  // OPTION_HELD | AWAITING_CONFIRMATION | REBOOKED | ESCALATED
+  state     String       @default("UNVERIFIED")
+  channel   String       @default("TEXT") // TEXT | VOICE
+  booking   Booking?     @relation(fields: [bookingId], references: [id])
+  events    AuditEvent[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+model AuditEvent {
+  id        String              @id @default(cuid())
+  sessionId String
+  action    String
+  details   String? // JSON string
+  session   ConversationSession @relation(fields: [sessionId], references: [id])
+  createdAt DateTime            @default(now())
+
+  @@index([sessionId])
+}
