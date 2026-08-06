@@ -78,10 +78,43 @@ model ConversationSession {
   // OPTION_HELD | AWAITING_CONFIRMATION | REBOOKED | ESCALATED
   state     String       @default("UNVERIFIED")
   channel   String       @default("TEXT") // TEXT | VOICE
-  booking   Booking?     @relation(fields: [bookingId], references: [id])
-  events    AuditEvent[]
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+
+  // Navigation only. The selected flight lives on RebookingHold.newFlightId and
+  // "confirmation required" is derived from state === AWAITING_CONFIRMATION.
+  activeHoldId String?
+
+  booking            Booking?            @relation(fields: [bookingId], references: [id])
+  events             AuditEvent[]
+  supportCases       SupportCase[]
+  idempotencyRecords IdempotencyRecord[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+}
+
+model SupportCase {
+  id                 String              @id @default(cuid())
+  sessionId          String
+  reason             String // VERIFICATION_FAILED | NO_ALTERNATIVE_FLIGHTS | PASSENGER_REQUEST | POLICY_EXCEPTION | BACKEND_ERROR
+  escalatedFromState String
+  status             String              @default("OPEN") // OPEN | RESOLVED
+  createdAt          DateTime            @default(now())
+  resolvedAt         DateTime?
+  session            ConversationSession @relation(fields: [sessionId], references: [id])
+
+  @@index([sessionId])
+}
+
+model IdempotencyRecord {
+  id           String              @id @default(cuid())
+  key          String              @unique
+  operation    String
+  sessionId    String
+  requestHash  String
+  responseJson String?
+  createdAt    DateTime            @default(now())
+  session      ConversationSession @relation(fields: [sessionId], references: [id])
+
+  @@index([sessionId])
 }
 
 model AuditEvent {

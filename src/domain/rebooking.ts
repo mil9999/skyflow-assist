@@ -142,7 +142,11 @@ export interface AlternativeOption {
   flight: Flight;
 }
 
-/** Earliest arrival first, then fewest stops. Never returns more than MAX_OPTIONS_PRESENTED. */
+/**
+ * Direct flights first, then earliest arrival, then earliest departure, then
+ * flight number so ties are deterministic. Never returns more than
+ * MAX_OPTIONS_PRESENTED.
+ */
 export function findAlternatives(
   original: Flight,
   candidates: Flight[],
@@ -152,7 +156,10 @@ export function findAlternatives(
     .filter((c) => isAlternativeEligible(original, c, prefs).ok)
     .sort(
       (a, b) =>
-        a.arrivalTime.getTime() - b.arrivalTime.getTime() || a.stops - b.stops,
+        a.stops - b.stops ||
+        a.arrivalTime.getTime() - b.arrivalTime.getTime() ||
+        a.departureTime.getTime() - b.departureTime.getTime() ||
+        a.flightNumber.localeCompare(b.flightNumber),
     )
     .slice(0, MAX_OPTIONS_PRESENTED)
     .map((flight) => ({ optionId: `OPT-${flight.flightNumber}`, flight }));
@@ -206,20 +213,8 @@ export function canConfirmRebooking(
 /* State machine                                                       */
 /* ------------------------------------------------------------------ */
 
-const TRANSITIONS: Record<string, string[]> = {
-  UNVERIFIED: ["VERIFIED", "ESCALATED"],
-  VERIFIED: ["BOOKING_LOADED", "ESCALATED"],
-  BOOKING_LOADED: ["OPTIONS_PRESENTED", "ESCALATED"],
-  OPTIONS_PRESENTED: ["OPTION_HELD", "OPTIONS_PRESENTED", "ESCALATED"],
-  OPTION_HELD: ["AWAITING_CONFIRMATION", "OPTIONS_PRESENTED", "ESCALATED"],
-  AWAITING_CONFIRMATION: ["REBOOKED", "OPTIONS_PRESENTED", "ESCALATED"],
-  REBOOKED: ["ESCALATED"],
-  ESCALATED: [],
-};
-
-export function canTransition(from: string, to: string): boolean {
-  return (TRANSITIONS[from] ?? []).includes(to);
-}
+// Single source of truth lives in rebooking-state.ts; re-exported for convenience.
+export { allowedTransitions, assertTransitionAllowed, canTransition } from "./rebooking-state";
 
 /** Idempotency key so a repeated confirm_rebooking tool call cannot rebook twice. */
 export function rebookingIdempotencyKey(bookingId: string, newFlightId: string): string {

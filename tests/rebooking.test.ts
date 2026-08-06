@@ -91,8 +91,8 @@ describe("disruption detection", () => {
 });
 
 describe("alternative search", () => {
-  it("returns eligible flights sorted by earliest arrival", () => {
-    expect(numbers(findAlternatives(SF204, ALL, { now: NOW }))).toEqual(["SF218", "SF310", "SF224"]);
+  it("returns direct flights first, then earliest arrival", () => {
+    expect(numbers(findAlternatives(SF204, ALL, { now: NOW }))).toEqual(["SF218", "SF224", "SF310"]);
   });
 
   it("excludes cancelled flights, full flights, wrong destinations and departed flights", () => {
