@@ -4,7 +4,7 @@ import { AuditAction, HOLD_DURATION_MINUTES } from "../../domain/constants";
 import { DomainError, ErrorCode } from "../../domain/errors";
 import { assertTransitionAllowed } from "../../domain/rebooking-state";
 import { isAlternativeEligible, type Flight } from "../../domain/rebooking";
-import { prisma } from "../db/prisma";
+import { prisma, type DatabaseClient } from "../db/prisma";
 import * as bookingRepository from "../repositories/booking-repository";
 import * as flightRepository from "../repositories/flight-repository";
 import * as holdRepository from "../repositories/hold-repository";
@@ -257,6 +257,116 @@ export async function confirmRebooking(input: ConfirmInput): Promise<ConfirmResu
 /* Expiry                                                              */
 /* ------------------------------------------------------------------ */
 
+type ReleaseStatus = "CANCELLED" | "EXPIRED";
+
+interface ReleasableHold {
+  id: string;
+  newFlightId: string;
+}
+
+interface RewindableSession {
+  id: string;
+  state: string;
+}
+
+/**
+ * The one place a held seat goes back into inventory. Cancellation and expiry
+ * both route through here so the two paths cannot drift apart.
+ */
+async function releaseAndRewind(
+  tx: DatabaseClient,
+  hold: ReleasableHold,
+  session: RewindableSession | null,
+  status: ReleaseStatus,
+): Promise<void> {
+  await holdRepository.setStatus(tx, hold.id, status);
+  await flightRepository.releaseSeat(tx, hold.newFlightId);
+
+  if (session) {
+    if (session.state === "OPTION_HELD" || session.state === "AWAITING_CONFIRMATION") {
+      assertTransitionAllowed(session.state, "OPTIONS_PRESENTED");
+      await sessionRepository.transition(tx, session.id, "OPTIONS_PRESENTED", {
+        activeHoldId: null,
+      });
+    }
+
+    await auditService.record(
+      tx,
+      session.id,
+      status === "CANCELLED" ? AuditAction.HOLD_CANCELLED : AuditAction.HOLD_EXPIRED,
+      { holdId: hold.id, flightId: hold.newFlightId, status },
+    );
+  }
+}
+
+export interface CancelHoldInput {
+  sessionId: string;
+  holdId: string;
+}
+
+export interface CancelHoldResult {
+  holdId: string;
+  status: ReleaseStatus;
+  seatReleased: boolean;
+  state: "OPTIONS_PRESENTED";
+}
+
+/**
+ * "No, not that one — show me something else."
+ *
+ * Distinct from confirmRebooking({ confirmed: false }), which stays strictly a
+ * refusal to act rather than a way to decline a flight.
+ */
+export async function cancelHold(input: CancelHoldInput): Promise<CancelHoldResult> {
+  return prisma.$transaction(async (tx) => {
+    const session = await sessionRepository.findById(tx, input.sessionId);
+    if (!session) {
+      throw new DomainError(ErrorCode.INVALID_STATE, "Unknown session.");
+    }
+
+    const hold = await holdRepository.findById(tx, input.holdId);
+    if (!hold) {
+      throw new DomainError(ErrorCode.INVALID_STATE, "Unknown hold.");
+    }
+    if (!session.bookingId || hold.bookingId !== session.bookingId) {
+      throw new DomainError(ErrorCode.INVALID_STATE, "That hold does not belong to this session.");
+    }
+    if (hold.status === "CONFIRMED") {
+      throw new DomainError(ErrorCode.ALREADY_REBOOKED, "That change has already been made.");
+    }
+
+    // Already released. Return the same shape without touching inventory again.
+    if (hold.status !== "ACTIVE") {
+      if (session.state === "OPTION_HELD" || session.state === "AWAITING_CONFIRMATION") {
+        assertTransitionAllowed(session.state, "OPTIONS_PRESENTED");
+        await sessionRepository.transition(tx, session.id, "OPTIONS_PRESENTED", {
+          activeHoldId: null,
+        });
+      }
+      return {
+        holdId: hold.id,
+        status: hold.status as ReleaseStatus,
+        seatReleased: false,
+        state: "OPTIONS_PRESENTED" as const,
+      };
+    }
+
+    if (session.activeHoldId !== hold.id) {
+      throw new DomainError(ErrorCode.INVALID_STATE, "That hold is not the active one.");
+    }
+
+    const status: ReleaseStatus = hold.expiresAt.getTime() <= Date.now() ? "EXPIRED" : "CANCELLED";
+    await releaseAndRewind(tx, hold, session, status);
+
+    return {
+      holdId: hold.id,
+      status,
+      seatReleased: true,
+      state: "OPTIONS_PRESENTED" as const,
+    };
+  });
+}
+
 export interface ExpireHoldInput {
   holdId: string;
 }
@@ -281,20 +391,8 @@ export async function expireHold(input: ExpireHoldInput): Promise<ExpireHoldResu
       throw new DomainError(ErrorCode.INVALID_STATE, "Only an active hold can expire.");
     }
 
-    await holdRepository.expire(tx, hold.id);
-    await flightRepository.releaseSeat(tx, hold.newFlightId);
-
     const session = await sessionRepository.findByActiveHold(tx, hold.id);
-    if (session && (session.state === "OPTION_HELD" || session.state === "AWAITING_CONFIRMATION")) {
-      assertTransitionAllowed(session.state, "OPTIONS_PRESENTED");
-      await sessionRepository.transition(tx, session.id, "OPTIONS_PRESENTED", {
-        activeHoldId: null,
-      });
-      await auditService.record(tx, session.id, AuditAction.HOLD_EXPIRED, {
-        holdId: hold.id,
-        flightId: hold.newFlightId,
-      });
-    }
+    await releaseAndRewind(tx, hold, session, "EXPIRED");
 
     return {
       holdId: hold.id,

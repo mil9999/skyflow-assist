@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import type { z } from "zod";
 
 import { isDomainError } from "@/domain/errors";
@@ -40,20 +42,19 @@ export function toolRoute<Schema extends z.ZodTypeAny, Result>(
     try {
       return ok(await run(parsed.data));
     } catch (error) {
+      // Expected refusals carry a safe, speakable message and a known status.
       if (isDomainError(error)) {
         return fromDomainError(error);
       }
 
-      // Unexpected errors can carry query parameters — booking references,
-      // surnames — so only the error *type* is logged by default.
-      const name = error instanceof Error ? error.name : "UnknownError";
-      if (process.env.NODE_ENV === "development") {
-        console.error(`[tools:${routeName}] ${name}`, error);
-      } else {
-        console.error(`[tools:${routeName}] ${name}`);
-      }
+      // Unexpected errors can carry request values — booking references,
+      // surnames, query parameters — inside their message and stack. Only the
+      // error's class name is ever logged, in every environment.
+      const requestId = randomUUID();
+      const errorName = error instanceof Error ? error.name : "UnknownError";
+      console.error(`[tools:${routeName}] ${errorName} requestId=${requestId}`);
 
-      return fail("INTERNAL_ERROR", "Something went wrong on our side.", 500);
+      return fail("INTERNAL_ERROR", "Something went wrong on our side.", 500, requestId);
     }
   };
 }

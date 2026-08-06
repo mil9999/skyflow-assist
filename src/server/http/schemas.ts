@@ -33,6 +33,11 @@ export const holdFlightSchema = z.object({
   flightId: id,
 });
 
+export const cancelHoldSchema = z.object({
+  sessionId: id,
+  holdId: id,
+});
+
 export const confirmRebookingSchema = z.object({
   sessionId: id,
   holdId: id,

@@ -27,14 +27,24 @@ export interface FailureBody {
   code: string;
   /** Written to be spoken aloud verbatim. Never contains internal detail. */
   message: string;
+  /** Only present on 500s, so a report can be tied to a log line. */
+  requestId?: string;
 }
 
 export function ok<T>(data: T, status = 200): Response {
   return Response.json({ ok: true, data } satisfies SuccessBody<T>, { status });
 }
 
-export function fail(code: string, message: string, status: number): Response {
-  return Response.json({ ok: false, code, message } satisfies FailureBody, { status });
+export function fail(
+  code: string,
+  message: string,
+  status: number,
+  requestId?: string,
+): Response {
+  const body: FailureBody = requestId
+    ? { ok: false, code, message, requestId }
+    : { ok: false, code, message };
+  return Response.json(body, { status });
 }
 
 export function fromDomainError(error: DomainError): Response {

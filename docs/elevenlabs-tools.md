@@ -18,8 +18,19 @@ Base URL is `http://localhost:3000` in development, and the deployed origin late
 | `get_disrupted_booking` | `POST /api/tools/get-booking` | Fetch the cancelled flight and the reason. |
 | `search_alternative_flights` | `POST /api/tools/search-flights` | Up to three eligible replacements. |
 | `hold_selected_flight` | `POST /api/tools/hold-flight` | Reserve one seat for ten minutes. |
+| `release_held_flight` | `POST /api/tools/cancel-hold` | Give the seat back when the passenger declines or changes their mind. |
 | `confirm_flight_rebooking` | `POST /api/tools/confirm-rebooking` | Commit the change. Only after an explicit spoken yes. |
 | `transfer_to_human_agent` | `POST /api/tools/escalate` | Hand over to a person. |
+
+## When to call `release_held_flight`
+
+- The passenger says no to the held flight, or names a different one.
+- A confirmation attempt came back `HOLD_EXPIRED` — release first, then search again.
+- Never after a successful rebooking. That returns `409 ALREADY_REBOOKED`.
+
+Declining a flight is **not** `confirm_flight_rebooking` with `confirmed: false`.
+That call refuses to act and leaves the seat held; only `release_held_flight`
+puts the seat back and reopens the option list.
 
 ## Request bodies
 
@@ -38,6 +49,9 @@ Base URL is `http://localhost:3000` in development, and the deployed origin late
 
 // hold_selected_flight
 { "sessionId": "...", "flightId": "..." }    // flightId comes from the search result
+
+// release_held_flight
+{ "sessionId": "...", "holdId": "..." }      // holdId comes from the hold result
 
 // confirm_flight_rebooking
 { "sessionId": "...", "holdId": "...", "confirmed": true, "idempotencyKey": "call-<id>-confirm" }

@@ -27,8 +27,17 @@ export function confirm(db: DatabaseClient, id: string) {
   return db.rebookingHold.update({ where: { id }, data: { status: "CONFIRMED" } });
 }
 
+export function cancel(db: DatabaseClient, id: string) {
+  return db.rebookingHold.update({ where: { id }, data: { status: "CANCELLED" } });
+}
+
 export function expire(db: DatabaseClient, id: string) {
   return db.rebookingHold.update({ where: { id }, data: { status: "EXPIRED" } });
+}
+
+/** Used by both cancellation and expiry so the two paths cannot drift. */
+export function setStatus(db: DatabaseClient, id: string, status: "CANCELLED" | "EXPIRED") {
+  return db.rebookingHold.update({ where: { id }, data: { status } });
 }
 
 export function findDue(db: DatabaseClient, now: Date = new Date()) {
