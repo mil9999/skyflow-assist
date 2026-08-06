@@ -3,4 +3,6 @@
  * against test.db rather than your development database.
  */
 process.env.DATABASE_URL = `file:${process.cwd()}/prisma/test.db`;
-process.env.NODE_ENV = process.env.NODE_ENV ?? "test";
+
+/** Not a real secret — the routes only need *a* key to compare against. */
+process.env.TOOLS_API_KEY = "test-tools-api-key";
