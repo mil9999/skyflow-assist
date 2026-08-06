@@ -51,3 +51,4 @@ prisma/test.db
 prisma/test.db-journal
 prisma/test.db-shm
 prisma/test.db-wal
+*.db.backup
