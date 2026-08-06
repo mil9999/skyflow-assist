@@ -1,3 +1,4 @@
+import { airportName } from "../../domain/airports";
 import { AuditAction, FlightStatus } from "../../domain/constants";
 import { DomainError, ErrorCode } from "../../domain/errors";
 import { assertTransitionAllowed } from "../../domain/rebooking-state";
@@ -16,7 +17,9 @@ export interface DisruptedBookingResult {
   flight: {
     flightNumber: string;
     origin: string;
+    originName: string;
     destination: string;
+    destinationName: string;
     departureTime: string;
     arrivalTime: string;
     status: string;
@@ -76,7 +79,9 @@ export async function getDisruptedBooking(
     flight: {
       flightNumber: flight.flightNumber,
       origin: flight.origin,
+      originName: airportName(flight.origin),
       destination: flight.destination,
+      destinationName: airportName(flight.destination),
       departureTime: flight.departureTime.toISOString(),
       arrivalTime: flight.arrivalTime.toISOString(),
       status: flight.status,

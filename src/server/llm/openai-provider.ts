@@ -60,7 +60,9 @@ export class OpenAIProvider implements ModelProvider {
       throw new ProviderRequestError(`OpenAI request failed (${name}).`, false);
     }
 
-    const output = (response.output ?? []) as Record<string, unknown>[];
+    // Passed through opaquely: these items go straight back into the next
+    // request's input, so their exact SDK shape is not our concern.
+    const output = (response.output ?? []) as unknown as Record<string, unknown>[];
 
     return {
       id: response.id,
