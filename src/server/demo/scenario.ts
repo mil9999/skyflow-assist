@@ -5,11 +5,16 @@ import { prisma } from "../db/prisma";
  * The fictional SkyFlow scenario, in one place so `prisma db seed` and the
  * simulator's demo reset can never drift apart.
  *
- * Times are anchored to tomorrow, so the disrupted flight is always in the
- * future no matter when this runs.
+ * Anchored to midnight tomorrow rather than "now + 24 hours", so flights land on
+ * civilised clock times — 09:30, 13:00 — instead of whatever hour you happened
+ * to seed at. A demo where the only option departs at 2:13am is a bad demo.
  */
 export async function resetDemoScenario() {
-  const base = new Date(Date.now() + 24 * 60 * 60_000);
+  const now = new Date();
+  const base = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0),
+  );
+  /** Minutes past midnight, so 570 reads as 09:30. */
   const at = (minutes: number) => new Date(base.getTime() + minutes * 60_000);
 
   await prisma.idempotencyRecord.deleteMany();
@@ -63,50 +68,50 @@ export async function resetDemoScenario() {
       },
     });
 
-  // Scenario A — LHR to CDG, cancelled, three usable alternatives and a decoy.
+  // Scenario A — London to Paris, cancelled, three usable alternatives and a decoy.
   const sf204 = await flight({
     flightNumber: "SF204", origin: "LHR", destination: "CDG",
-    departure: 0, arrival: 135, availableSeats: 0, status: "CANCELLED",
+    departure: 570, arrival: 705, availableSeats: 0, status: "CANCELLED", // 09:30 – 11:45
   });
   await flight({
     flightNumber: "SF218", origin: "LHR", destination: "CDG",
-    departure: 210, arrival: 345, availableSeats: 17,
+    departure: 780, arrival: 915, availableSeats: 17, // 13:00 – 15:15
   });
   await flight({
     flightNumber: "SF224", origin: "LHR", destination: "CDG",
-    departure: 480, arrival: 615, availableSeats: 4,
+    departure: 1050, arrival: 1185, availableSeats: 4, // 17:30 – 19:45
   });
   await flight({
     flightNumber: "SF310", origin: "LHR", destination: "CDG",
-    departure: 270, arrival: 550, availableSeats: 9, stops: 1, connectionVia: "AMS",
+    departure: 840, arrival: 1120, availableSeats: 9, stops: 1, connectionVia: "AMS", // 14:00 – 18:40
   });
   await flight({
     flightNumber: "SF228", origin: "LHR", destination: "CDG",
-    departure: 700, arrival: 835, availableSeats: 0,
+    departure: 1215, arrival: 1350, availableSeats: 0, // 20:15 – 22:30, no seats
   });
 
-  // Scenario B — LHR to BCN, cancelled, nothing usable behind it.
+  // Scenario B — London to Barcelona, cancelled, nothing usable behind it.
   const sf640 = await flight({
     flightNumber: "SF640", origin: "LHR", destination: "BCN",
-    departure: 0, arrival: 200, availableSeats: 0, status: "CANCELLED",
+    departure: 480, arrival: 680, availableSeats: 0, status: "CANCELLED", // 08:00 – 11:20
   });
   await flight({
     flightNumber: "SF644", origin: "LHR", destination: "BCN",
-    departure: 400, arrival: 600, availableSeats: 0,
+    departure: 900, arrival: 1100, availableSeats: 0, // 15:00 – 18:20, full
   });
   await flight({
     flightNumber: "SF648", origin: "LHR", destination: "BCN",
-    departure: 700, arrival: 900, availableSeats: 12, status: "CANCELLED",
+    departure: 1140, arrival: 1340, availableSeats: 12, status: "CANCELLED", // 19:00 – 22:20
   });
 
   // Healthy flights.
   const sf120 = await flight({
     flightNumber: "SF120", origin: "LHR", destination: "JFK",
-    departure: 60, arrival: 540, availableSeats: 42,
+    departure: 600, arrival: 1080, availableSeats: 42, // 10:00 – 18:00
   });
   const sf130 = await flight({
     flightNumber: "SF130", origin: "CDG", destination: "LHR",
-    departure: 30, arrival: 95, availableSeats: 30,
+    departure: 435, arrival: 500, availableSeats: 30, // 07:15 – 08:20
   });
 
   await prisma.disruption.createMany({
