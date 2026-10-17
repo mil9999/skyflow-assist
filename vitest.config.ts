@@ -8,9 +8,9 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    // Creates prisma/test.db and pushes the schema into it once per run.
+    // Migrates a fresh temporary database once per run and removes it afterward.
     globalSetup: ["./tests/setup/global-setup.ts"],
-    // Points the Prisma client at that file before any test imports it.
+    // Injects the temporary database URL before any test imports Prisma.
     setupFiles: ["./tests/setup/env.ts"],
     // SQLite is a single file; parallel workers would fight over it.
     fileParallelism: false,

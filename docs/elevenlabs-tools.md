@@ -9,7 +9,9 @@ Every request needs the header:
 X-API-Key: <TOOLS_API_KEY from .env>
 ```
 
-Base URL is `http://localhost:3000` in development, and the deployed origin later.
+Use a reachable HTTPS origin for ElevenLabs cloud webhooks. `http://localhost:3000`
+works for local HTTP testing only; ElevenLabs cannot reach this computer's localhost.
+See [voice setup](voice-setup.md) for credentials and integration status.
 
 | ElevenLabs tool name | Method + path | Purpose |
 |---|---|---|
@@ -20,7 +22,7 @@ Base URL is `http://localhost:3000` in development, and the deployed origin late
 | `hold_selected_flight` | `POST /api/tools/hold-flight` | Reserve one seat for ten minutes. |
 | `release_held_flight` | `POST /api/tools/cancel-hold` | Give the seat back when the passenger declines or changes their mind. |
 | `confirm_flight_rebooking` | `POST /api/tools/confirm-rebooking` | Commit the change. Only after an explicit spoken yes. |
-| `transfer_to_human_agent` | `POST /api/tools/escalate` | Hand over to a person. |
+| `transfer_to_human_agent` | `POST /api/tools/escalate` | Create a support case; live employee connection is pending. |
 
 ## When to call `release_held_flight`
 

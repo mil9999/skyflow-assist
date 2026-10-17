@@ -1,75 +1,85 @@
-# SkyFlow Assist — AI Airline Disruption Agent
+# SkyFlow Assist
 
-A voice agent that helps passengers rebook after a flight cancellation.
-Fictional airline, fictional passengers, simulated rebooking.
+An airline disruption assistant that helps passengers rebook cancelled flights. All airline, passenger, and booking data is fictional. Booking eligibility, inventory, and confirmation are controlled by deterministic backend rules.
 
-- **Voice layer (later):** ElevenLabs Agents
-- **Brains and rules (this repo):** Next.js + Prisma + SQLite
+The current implementation is a Next.js text simulator with an OpenAI provider and scripted offline walkthroughs. ElevenLabs browser voice and a full employee takeover dashboard are the next milestones.
 
-## Phase 1 — what exists now
+## Run the local demo
 
-In scope:
-
-- Verification by booking reference + surname
-- Cancelled-flight detection
-- Alternative-flight search with direct-only and latest-arrival preferences
-- Seat hold with expiry
-- Rebooking only after an active hold **and** explicit passenger confirmation
-- Human escalation from any state
-- Audit trail
-
-Not in scope yet: real airline/GDS APIs, real passenger data, passports, payments, refunds,
-compensation, loyalty points, real email, telephony.
-
-## Key files
-
-| File | Purpose |
-|---|---|
-| `prisma/schema.prisma` | Passengers, flights, bookings, disruptions, holds, sessions, audit events |
-| `prisma/seed.ts` | SkyFlow Airlines fixtures — three demo scenarios plus decoy flights |
-| `src/domain/constants.ts` | Status/state values and business constants |
-| `src/domain/rebooking.ts` | Pure, deterministic rules — no DB, no LLM |
-| `tests/rebooking.test.ts` | 23 Vitest cases covering the Phase 1 checklist |
-
-## Commands
+Use Node.js 20.9 or newer.
 
 ```bash
-npm install @prisma/client zod            # one time
-npm install --save-dev prisma vitest tsx  # one time
-
-npx prisma migrate dev --name initial_schema   # create the database
-npx prisma generate                            # generate the DB client
-npm run seed                                   # load fictional data
-npm test                                       # expect 23 passing
-npm run studio                                 # browse the data
-npm run dev                                    # http://localhost:3000
+npm ci
+npm run setup:demo
+npm run dev
 ```
 
-## Seeded scenarios
+Open [the simulator](http://localhost:3000/simulator) or [the disruption board](http://localhost:3000).
 
-| Scenario | Reference | Surname | Expected agent behaviour |
-|---|---|---|---|
-| A — happy path | `SKY82Q` | Martin | SF204 cancelled → offer SF218 (15:15), SF310 (18:40, 1 stop), SF224 (19:45) → hold → confirm → rebooked |
-| B — no options | `SKY55T` | Okafor | SF640 cancelled, alternatives full or cancelled → escalate to a human |
-| C — bad identity | `SKY82Q` | Dubois | `SURNAME_MISMATCH`; reveal nothing about the booking |
+`setup:demo` creates an ignored local `.env`, generates a tool access key, applies database migrations, and seeds an empty demo database with tomorrow's flights. It preserves existing application data on later runs. It only supports the local `file:./dev.db` database.
 
-Decoys that must never be offered: SF228 (0 seats), SF644 (full), SF648 (cancelled),
-SF120 (wrong destination), SF900 (already departed).
+The new local environment uses `TEXT_AGENT_PROVIDER=fake` and enables development-only demo resets. Interactive fake-provider replies are canned; use the three **scripted scenario** buttons to see complete backend workflows. The scenarios explicitly restore the fictional data before running and make no AI API calls.
 
-## Design rule
+## Try the passenger journeys
 
-The LLM chooses *which* tool to call and *how to speak*. It never decides eligibility, price,
-seat availability, or whether a rebooking may proceed. Those answers come only from
-`src/domain/rebooking.ts` via the backend.
+| Scenario | Booking / surname | Outcome |
+|---|---|---|
+| Successful rebooking | `SKY82Q` / Martin | Search eligible flights, hold SF218, read it back, then rebook after an explicit yes |
+| No flights available | `SKY55T` / Okafor | Create a support case for human assistance |
+| Failed verification | `SKY82Q` / Dubois | Refuse booking disclosure and escalate after two failed checks |
 
-## Roadmap
+The simulator displays the conversation, tool calls, state transitions, active-hold status, and audit events. Scripted replies demonstrate orchestration and backend safeguards; they do not measure a live model's reliability.
 
-1. **Phase 1 ✅** Data model + deterministic rules + tests
-2. **Phase 2** Service layer: `verifyPassenger`, `getRebookingOptions`, `holdFlight`, `confirmRebooking`, `escalateToHuman`
-3. **Phase 3** API routes (these become ElevenLabs webhook tools)
-4. **Phase 4** Text-mode conversation testing (free)
-5. **Phase 5** ElevenLabs voice in the browser
-6. **Phase 6** Employee dashboard: live transcript, booking state, tool calls, takeover button
-7. **Phase 7** Guardrails, audit log, scripted evaluations
-8. **Phase 8** Deploy to Vercel
-9. **Phase 9** Optional: Twilio phone number
+Each scripted run and **Reset demo** replaces fictional demo records and clears simulator conversations. These endpoints require both `NODE_ENV=development` and `ALLOW_DEMO_RESET=true`. Flights are seeded for tomorrow; reset the demo when its saved timetable becomes stale.
+
+## Use a live text model
+
+Set these values in your local `.env`, then restart the development server:
+
+```dotenv
+TEXT_AGENT_PROVIDER="openai"
+OPENAI_API_KEY="your-key-here"
+```
+
+`TEXT_AGENT_MODEL` and `TEXT_AGENT_REASONING_EFFORT` select the passenger assistant's model. They are independent of the model used to develop this repository. Model access and live API usage depend on your account. Keep keys server-side and out of Git.
+
+## Validation
+
+```bash
+npm test
+npm run lint
+npm run build
+```
+
+There are 123 automated tests covering domain rules, service transactions, authenticated HTTP tools, hold cancellation, conversation orchestration, and the scripted scenarios. Tests apply the real migrations to a fresh temporary SQLite database and remove it afterward. They never reset the development database and never make live AI API calls.
+
+The app uses system fonts, so production builds do not require a Google Fonts download.
+
+## Implementation status
+
+| Milestone | Status |
+|---|---|
+| Data model and deterministic rebooking rules | Implemented |
+| Transactional services, inventory, holds, and idempotency | Implemented |
+| Authenticated webhook tool routes | Implemented |
+| Text simulator, agent tool loop, and scripted scenarios | Implemented |
+| Browser voice through ElevenLabs | Pending agent setup and integration |
+| Employee monitoring, persistent transcripts, and takeover | Pending; the current inspector is a developer tool |
+| Live-model quality evaluation | Pending; existing conversation tests use scripted model responses |
+| Hosted deployment | Pending; needs durable storage, session handling, and access controls |
+| Telephone channel | Optional later milestone |
+
+The current simulator keeps model conversation context in the server process. It expires when that process restarts. The database persists bookings, holds, support cases, sessions, and audit events. A support case is an escalation record, not a connection to a staffed contact centre.
+
+## Code map
+
+- `src/domain/`: eligibility, verification, and booking-state rules.
+- `src/server/services/` and `repositories/`: database-backed airline operations.
+- `src/app/api/tools/`: authenticated airline tools.
+- `src/agent/`: model instructions, tool execution, and the conversation loop.
+- `src/app/simulator/` and `src/app/api/simulator/`: text UI and offline walkthroughs.
+- `prisma/`: schema, migrations, and fictional seed data.
+- `tests/`: automated checks and isolated database setup.
+- [Voice setup](docs/voice-setup.md) and [webhook map](docs/elevenlabs-tools.md): credentials and intended voice-tool configuration.
+
+Real airline/GDS APIs, real passenger records, payments, refunds, compensation, loyalty, outbound email, and telephony are outside the current demo scope.

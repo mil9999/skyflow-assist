@@ -37,6 +37,7 @@ export async function POST(): Promise<Response> {
     conversationId: conversation.conversationId,
     state: body.data.state,
     model: agentModel(),
+    provider: process.env.TEXT_AGENT_PROVIDER === "fake" ? "fake" : "openai",
     trace: [
       {
         type: "TOOL",

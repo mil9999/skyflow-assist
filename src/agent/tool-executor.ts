@@ -6,16 +6,25 @@ import { POST as holdFlightRoute } from "@/app/api/tools/hold-flight/route";
 import { POST as searchFlightsRoute } from "@/app/api/tools/search-flights/route";
 import { POST as verifyPassengerRoute } from "@/app/api/tools/verify-passenger/route";
 import { prisma } from "@/server/db/prisma";
+import type { FailureBody, SuccessBody } from "@/server/http/respond";
+import type { DisruptedBookingResult } from "@/server/services/booking-service";
+import type { EscalateResult } from "@/server/services/escalation-service";
+import type { SearchResult } from "@/server/services/flight-search-service";
+import type { CancelHoldResult, ConfirmResult, HoldResult } from "@/server/services/rebooking-service";
+import type { VerifyPassengerResult } from "@/server/services/verification-service";
 import type { SimulatorConversation, StoredFlightOption, ToolResult } from "./types";
 
 type Route = (request: Request) => Promise<Response>;
+type RouteResult<T> =
+  | { ok: true; status: number; data: T }
+  | { ok: false; status: number; error: FailureBody };
 
 /**
  * The executor calls the Phase 3 route handlers in-process rather than over the
  * network. Same authentication, same validation, same status codes — but no base
  * URL to configure and no server required in tests.
  */
-async function callRoute(route: Route, body: unknown): Promise<{ status: number; body: any }> {
+async function callRoute<T>(route: Route, body: unknown): Promise<RouteResult<T>> {
   const response = await route(
     new Request("http://internal/api/tools", {
       method: "POST",
@@ -26,7 +35,10 @@ async function callRoute(route: Route, body: unknown): Promise<{ status: number;
       body: JSON.stringify(body),
     }),
   );
-  return { status: response.status, body: await response.json() };
+  const envelope = (await response.json()) as SuccessBody<T> | FailureBody;
+  return envelope.ok
+    ? { ok: true, status: response.status, data: envelope.data }
+    : { ok: false, status: response.status, error: envelope };
 }
 
 const failure = (code: string, message: string, status = 409): ToolResult => ({
@@ -43,12 +55,12 @@ const success = (payload: Record<string, unknown>, status = 200): ToolResult => 
 });
 
 /** Passes a route failure straight through, so the model sees the real code. */
-function passThrough(result: { status: number; body: any }): ToolResult {
+function passThrough(result: Extract<RouteResult<unknown>, { ok: false }>): ToolResult {
   return {
     ok: false,
     status: result.status,
-    code: result.body?.code,
-    payload: { ok: false, code: result.body?.code, message: result.body?.message },
+    code: result.error.code,
+    payload: { ok: false, code: result.error.code, message: result.error.message },
   };
 }
 
@@ -84,23 +96,23 @@ export async function executeTool(
   switch (name) {
     /* ---------------------------------------------------------------- */
     case "verify_passenger_identity": {
-      const result = await callRoute(verifyPassengerRoute, {
+      const result = await callRoute<VerifyPassengerResult>(verifyPassengerRoute, {
         sessionId: conversation.sessionId,
         bookingReference: String(args.bookingReference ?? ""),
         lastName: String(args.lastName ?? ""),
       });
-      if (result.status !== 200) return passThrough(result);
-      return success({ verified: true, bookingReference: result.body.data.bookingReference });
+      if (!result.ok) return passThrough(result);
+      return success({ verified: true, bookingReference: result.data.bookingReference });
     }
 
     /* ---------------------------------------------------------------- */
     case "get_disrupted_booking": {
-      const result = await callRoute(getBookingRoute, { sessionId: conversation.sessionId });
-      if (result.status !== 200) return passThrough(result);
+      const result = await callRoute<DisruptedBookingResult>(getBookingRoute, { sessionId: conversation.sessionId });
+      if (!result.ok) return passThrough(result);
       return success({
-        bookingReference: result.body.data.bookingReference,
-        flight: result.body.data.flight,
-        disruption: result.body.data.disruption,
+        bookingReference: result.data.bookingReference,
+        flight: result.data.flight,
+        disruption: result.data.disruption,
       });
     }
 
@@ -112,10 +124,10 @@ export async function executeTool(
         body.latestArrivalTime = args.latestArrivalTime;
       }
 
-      const result = await callRoute(searchFlightsRoute, body);
-      if (result.status !== 200) return passThrough(result);
+      const result = await callRoute<SearchResult>(searchFlightsRoute, body);
+      if (!result.ok) return passThrough(result);
 
-      const options = result.body.data.options as StoredFlightOption[];
+      const options = result.data.options as StoredFlightOption[];
       // Real flight IDs stay here, never reaching the model.
       conversation.latestOptions = options;
 
@@ -141,19 +153,19 @@ export async function executeTool(
         );
       }
 
-      const result = await callRoute(holdFlightRoute, {
+      const result = await callRoute<HoldResult>(holdFlightRoute, {
         sessionId: conversation.sessionId,
         flightId: option.flightId,
       });
-      if (result.status !== 200) return passThrough(result);
+      if (!result.ok) return passThrough(result);
 
-      conversation.activeHoldId = result.body.data.holdId;
+      conversation.activeHoldId = result.data.holdId;
       // A new hold means a new confirmation, so the old key must not be reused.
       conversation.confirmationIdempotencyKey = undefined;
 
       return success({
-        flightNumber: result.body.data.flightNumber,
-        expiresAt: result.body.data.expiresAt,
+        flightNumber: result.data.flightNumber,
+        expiresAt: result.data.expiresAt,
         requiresConfirmation: true,
       });
     }
@@ -164,16 +176,16 @@ export async function executeTool(
         return failure("INVALID_STATE", "There is no held seat to release.");
       }
 
-      const result = await callRoute(cancelHoldRoute, {
+      const result = await callRoute<CancelHoldResult>(cancelHoldRoute, {
         sessionId: conversation.sessionId,
         holdId: conversation.activeHoldId,
       });
-      if (result.status !== 200) return passThrough(result);
+      if (!result.ok) return passThrough(result);
 
       conversation.activeHoldId = undefined;
       conversation.confirmationIdempotencyKey = undefined;
 
-      return success({ released: true, status: result.body.data.status });
+      return success({ released: true, status: result.data.status });
     }
 
     /* ---------------------------------------------------------------- */
@@ -194,33 +206,33 @@ export async function executeTool(
       conversation.confirmationIdempotencyKey ??=
         `simulator:${conversation.conversationId}:confirm:${conversation.activeHoldId}`;
 
-      const result = await callRoute(confirmRebookingRoute, {
+      const result = await callRoute<ConfirmResult>(confirmRebookingRoute, {
         sessionId: conversation.sessionId,
         holdId: conversation.activeHoldId,
         confirmed: true,
         idempotencyKey: conversation.confirmationIdempotencyKey,
       });
-      if (result.status !== 200) return passThrough(result);
+      if (!result.ok) return passThrough(result);
 
       conversation.activeHoldId = undefined;
 
       return success({
-        bookingReference: result.body.data.bookingReference,
-        newFlight: result.body.data.newFlight,
+        bookingReference: result.data.bookingReference,
+        newFlight: result.data.newFlight,
       });
     }
 
     /* ---------------------------------------------------------------- */
     case "transfer_to_human_agent": {
-      const result = await callRoute(escalateRoute, {
+      const result = await callRoute<EscalateResult>(escalateRoute, {
         sessionId: conversation.sessionId,
         reason: String(args.reason ?? "PASSENGER_REQUEST"),
       });
-      if (result.status !== 200) return passThrough(result);
+      if (!result.ok) return passThrough(result);
 
       return success({
         transferred: true,
-        reference: result.body.data.reference,
+        reference: result.data.reference,
       });
     }
 

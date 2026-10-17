@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // This standalone app can sit inside a folder with another package-lock.json.
+  turbopack: { root: __dirname },
 };
 
 export default nextConfig;

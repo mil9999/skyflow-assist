@@ -1,4 +1,5 @@
 import { prisma } from "@/server/db/prisma";
+import Link from "next/link";
 import { findAlternatives, isAlternativeEligible, type Flight } from "@/domain/rebooking";
 
 // Always read fresh data from the database on each page load.
@@ -37,6 +38,9 @@ export default async function Home() {
         <header className="border-b border-slate-800 pb-5">
           <p className="text-xs uppercase tracking-widest text-sky-400">SkyFlow Airlines</p>
           <h1 className="mt-1 text-3xl font-semibold">Disruption board</h1>
+          <Link href="/simulator" className="mt-4 inline-block rounded bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500">
+            Open rebooking simulator
+          </Link>
           <p className="mt-2 text-sm text-slate-400">
             Live from your database. The green flights are the only ones the voice agent will ever be
             allowed to offer.
@@ -148,8 +152,7 @@ export default async function Home() {
         })}
 
         <footer className="border-t border-slate-800 pt-5 text-sm text-slate-500">
-          Phase 1 complete. No AI yet — every flight above was chosen by{" "}
-          <code className="text-slate-400">src/domain/rebooking.ts</code>, not by a language model.
+          Fictional airline data. Flight eligibility and booking changes are controlled by the backend.
         </footer>
       </div>
     </main>

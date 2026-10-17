@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "setup:demo": "node scripts/setup-demo.mjs",
     "test": "vitest run",
     "seed": "prisma db seed",
     "studio": "prisma studio"
