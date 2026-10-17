@@ -224,6 +224,16 @@ export async function executeTool(
 
     /* ---------------------------------------------------------------- */
     case "transfer_to_human_agent": {
+      // A handover must not strand a seat in a terminal conversation.
+      if (conversation.activeHoldId) {
+        const released = await callRoute<CancelHoldResult>(cancelHoldRoute, {
+          sessionId: conversation.sessionId,
+          holdId: conversation.activeHoldId,
+        });
+        if (!released.ok) return passThrough(released);
+        conversation.activeHoldId = undefined;
+        conversation.confirmationIdempotencyKey = undefined;
+      }
       const result = await callRoute<EscalateResult>(escalateRoute, {
         sessionId: conversation.sessionId,
         reason: String(args.reason ?? "PASSENGER_REQUEST"),
@@ -232,6 +242,7 @@ export async function executeTool(
 
       return success({
         transferred: true,
+        handoverStatus: "SUPPORT_CASE_CREATED",
         reference: result.data.reference,
       });
     }

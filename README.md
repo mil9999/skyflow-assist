@@ -2,7 +2,7 @@
 
 An airline disruption assistant that helps passengers rebook cancelled flights. All airline, passenger, and booking data is fictional. Booking eligibility, inventory, and confirmation are controlled by deterministic backend rules.
 
-The current implementation is a Next.js text simulator with an OpenAI provider and scripted offline walkthroughs. ElevenLabs browser voice and a full employee takeover dashboard are the next milestones.
+The current implementation includes a Next.js text simulator, scripted offline walkthroughs, and a local ElevenLabs browser conversation page. A full employee takeover dashboard is the next major product milestone.
 
 ## Run the local demo
 
@@ -43,6 +43,21 @@ OPENAI_API_KEY="your-key-here"
 
 `TEXT_AGENT_MODEL` and `TEXT_AGENT_REASONING_EFFORT` select the passenger assistant's model. They are independent of the model used to develop this repository. Model access and live API usage depend on your account. Keep keys server-side and out of Git.
 
+## Use the ElevenLabs agent
+
+Add `ELEVENLABS_API_KEY` to the ignored local `.env`. To create a dedicated SkyFlow agent and its seven client tools in your ElevenLabs account:
+
+```bash
+npm run setup:voice -- --create
+npm run dev -- --hostname 127.0.0.1
+```
+
+The setup script saves the agent ID locally and enables signed-URL authentication. If setup is interrupted, it resumes using an ignored local configuration checkpoint. It refuses to overwrite a different configured agent. See [voice setup](docs/voice-setup.md) for details.
+
+Open [voice rebooking](http://127.0.0.1:3000/voice). Choose a microphone conversation or **Use text instead of microphone**, then start. Both modes use the live ElevenLabs agent and account credits. The permanent key stays on the server. Browser client tools call the same deterministic airline backend used by the text simulator.
+
+The voice endpoints require development mode and a loopback host, and reject foreign browser origins. They remain disabled in production until application authentication and deployment controls are implemented.
+
 ## Validation
 
 ```bash
@@ -51,7 +66,7 @@ npm run lint
 npm run build
 ```
 
-There are 123 automated tests covering domain rules, service transactions, authenticated HTTP tools, hold cancellation, conversation orchestration, and the scripted scenarios. Tests apply the real migrations to a fresh temporary SQLite database and remove it afterward. They never reset the development database and never make live AI API calls.
+There are 138 automated tests covering domain rules, service transactions, authenticated HTTP tools, hold cancellation, conversation orchestration, scripted scenarios, and the voice bridge. Tests apply the real migrations to a fresh temporary SQLite database and remove it afterward. They never reset the development database and never make live AI API calls.
 
 The app uses system fonts, so production builds do not require a Google Fonts download.
 
@@ -63,13 +78,15 @@ The app uses system fonts, so production builds do not require a Google Fonts do
 | Transactional services, inventory, holds, and idempotency | Implemented |
 | Authenticated webhook tool routes | Implemented |
 | Text simulator, agent tool loop, and scripted scenarios | Implemented |
-| Browser voice through ElevenLabs | Pending agent setup and integration |
+| Browser voice through ElevenLabs | Local integration implemented; live agent tested through text mode; spoken audio check pending |
 | Employee monitoring, persistent transcripts, and takeover | Pending; the current inspector is a developer tool |
 | Live-model quality evaluation | Pending; existing conversation tests use scripted model responses |
 | Hosted deployment | Pending; needs durable storage, session handling, and access controls |
 | Telephone channel | Optional later milestone |
 
 The current simulator keeps model conversation context in the server process. It expires when that process restarts. The database persists bookings, holds, support cases, sessions, and audit events. A support case is an escalation record, not a connection to a staffed contact centre.
+
+Voice context is also held in the server process and its visible transcript in the browser. Normal disconnect, declining a held flight, and support escalation release unconfirmed holds. Page-leave cleanup is best effort; a durable expiry worker and crash recovery remain deployment prerequisites.
 
 ## Code map
 

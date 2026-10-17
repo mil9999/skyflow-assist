@@ -175,6 +175,7 @@ export default function SimulatorPage() {
             <p className="text-xs uppercase tracking-widest text-sky-400">SkyFlow Assist</p>
             <h1 className="text-xl font-semibold">Text simulator</h1>
             <Link href="/" className="text-sm text-sky-400 hover:underline">Disruption board</Link>
+            <Link href="/voice" className="ml-4 text-sm text-sky-400 hover:underline">Voice rebooking</Link>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-sm">
             <span className="text-slate-400">

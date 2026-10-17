@@ -90,7 +90,7 @@ export const AGENT_TOOLS: ModelTool[] = [
     type: "function",
     name: "transfer_to_human_agent",
     description:
-      "Hand the conversation to a human colleague. Use when no flights are suitable, the passenger asks for a person, verification has failed twice, or a tool reports a server error.",
+      "Create a support case for human assistance. Use when no flights are suitable, the passenger asks for a person, verification has failed twice, or a tool reports a server error. This demo does not connect a live employee.",
     strict: true,
     parameters: object({
       reason: {
