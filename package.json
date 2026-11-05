@@ -9,6 +9,7 @@
     "lint": "eslint",
     "setup:demo": "node scripts/setup-demo.mjs",
     "setup:voice": "tsx scripts/setup-voice.ts",
+    "holds:expire": "node --import tsx scripts/expire-holds.ts",
     "test": "vitest run",
     "seed": "prisma db seed",
     "studio": "prisma studio"

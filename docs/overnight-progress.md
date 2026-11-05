@@ -1,6 +1,6 @@
 # SkyFlow Assist development checkpoint
 
-Updated: 17 October 2026. Repository: `mil9999/skyflow-assist` (public). Current work branch: `codex/complete-disruption-demo`.
+Updated: 5 November 2026. Repository: `mil9999/skyflow-assist` (public). Current work branch: `codex/complete-disruption-demo`.
 
 ## Completed in the current milestone
 
@@ -15,17 +15,27 @@ Updated: 17 October 2026. Repository: `mil9999/skyflow-assist` (public). Current
 - Added serialized tool execution, transport retry deduplication, and normal-disconnect hold release. Escalation now releases a held seat before making the conversation terminal.
 - Live ElevenLabs text-mode checks passed: no available flights and support case, direct search, hold/read-back, ambiguous confirmation refusal, declined hold release, replacement selection, explicit confirmation, final rebooking, and escalation after two failed identity checks without booking disclosure. SQLite showed SF224 booked once, SF218 restored to 17 seats, SF224 at 3 seats, and zero active holds. The agent's unsupported follow-up promise was removed from its instructions.
 - Added explicit backend state to voice tool results after observing a redundant handover request following automatic verification escalation. Terminal states now tell the model to stop calling tools; the backend already refused that extra request.
-- Final validation: all 138 tests, lint, TypeScript, and the production build pass, including the final state-signal adjustment. The dedicated remote agent's instructions and authentication were synchronized and verified. Demo bookings were restored after live testing.
-- Updated Next.js to 16.4.2 and compatible locked dependencies. `npm audit` now reports 8 high advisories in the braces lint-tool chain and the Prisma/deepmerge-ts configuration chain; the production-filtered audit includes the 3 Prisma-chain entries. Resolve these deliberately before deployment rather than forcing a framework downgrade or an unplanned Prisma major migration.
+- Voice milestone validation (17 October): all 138 tests, lint, TypeScript, and the production build passed, including the final state-signal adjustment. The dedicated remote agent's instructions and authentication were synchronized and verified. Demo bookings were restored after live testing.
+- Updated Next.js to 16.4.2 and compatible locked dependencies. The last dependency audit (17 October) reported 8 high advisories in the braces lint-tool chain and the Prisma/deepmerge-ts configuration chain; the production-filtered audit included the 3 Prisma-chain entries. Resolve these deliberately before deployment rather than forcing a framework downgrade or an unplanned Prisma major migration.
+
+## Hold-expiry recovery milestone (5 November)
+
+- Added a one-shot `npm run holds:expire` command using persisted hold deadlines without browser or model context.
+- Expiry ignores future deadlines and already released/confirmed holds; repeated sweeps report only newly released seats.
+- Added regression coverage for early/repeated expiry, cancelled/confirmed holds, overlapping workers, and a separate recovery process.
+- Updated README and voice setup with recovery instructions and the distinction between a one-shot command and a scheduled worker. No scheduler was installed.
+- Validation: all 143 tests pass against a temporary migrated database; lint and `tsc --noEmit` pass. The separate-process test exercises the recovery command twice without browser or model memory and confirms inventory is restored once.
+- Production verification: `npm run build -- --webpack` passes, including TypeScript and all 21 generated pages. The default Turbopack build remains blocked by the local environment denying the CSS worker's internal port, including on the requested escalation; no successful default build is claimed for this milestone.
+- Duplicate generated `.next/types` files had caused TypeScript collisions. Moved only those duplicate cache files to a temporary backup; source TypeScript checks were not weakened.
 
 ## Next work
 
-1. Validate microphone speech recognition, audio, interruptions, and live expired-hold recovery. The live agent's rebooking tools have been exercised through text mode. See `voice-setup.md`; do not print credentials or commit `.env`.
+1. Add persistent conversation context/transcripts, then an employee monitoring/takeover interface. Start with the stored conversation history and ensure takeover blocks further AI booking actions.
 2. Add repeatable live-model evaluation across the passenger journeys; individual successful live runs do not establish reliability.
-3. Add persistent conversation context and an employee monitoring/takeover interface.
-4. Prepare hosted storage, session handling, and access controls before deployment.
+3. Validate microphone speech recognition, audio, interruptions, and live expired-hold recovery. The live agent's rebooking tools have been exercised through text mode. See `voice-setup.md`; do not print credentials or commit `.env`.
+4. Prepare hosted storage, session handling, a scheduled expiry worker, and access controls before deployment.
 
-The current text and voice backends keep conversation context in memory. The voice transcript lives in the browser. Support cases are records, not a live contact-centre connection. Durable expiry/crash recovery and application authentication are required before hosted voice is enabled.
+The current text and voice backends keep conversation context in memory. The voice transcript lives in the browser. Support cases are records, not a live contact-centre connection. Overdue holds can now be recovered from the database with `holds:expire`, but scheduling expiry, restoring conversations, and application authentication are required before hosted voice is enabled.
 
 Work is tracked in draft [PR #1](https://github.com/mil9999/skyflow-assist/pull/1). Keep it reviewable and update its description when scope changes.
 

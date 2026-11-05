@@ -58,6 +58,18 @@ Open [voice rebooking](http://127.0.0.1:3000/voice). Choose a microphone convers
 
 The voice endpoints require development mode and a loopback host, and reject foreign browser origins. They remain disabled in production until application authentication and deployment controls are implemented.
 
+## Recover abandoned seat holds
+
+If a browser or server stops before releasing a held seat, run this from the repository root:
+
+```bash
+npm run holds:expire
+```
+
+The command loads the local environment and checks persisted hold deadlines. It releases overdue active holds, restores their seats, and returns linked conversations to the flight options. Future, cancelled, and confirmed holds are left alone. Repeating the command is safe; its JSON result reports only newly expired holds, for example `{"expiredHolds":1}`.
+
+This is a one-shot recovery command. No background worker or recurring scheduler is installed, so abandoned seats remain reserved until the command or another expiry sweep runs. Hosted deployment still needs a scheduled worker.
+
 ## Validation
 
 ```bash
@@ -66,9 +78,11 @@ npm run lint
 npm run build
 ```
 
-There are 138 automated tests covering domain rules, service transactions, authenticated HTTP tools, hold cancellation, conversation orchestration, scripted scenarios, and the voice bridge. Tests apply the real migrations to a fresh temporary SQLite database and remove it afterward. They never reset the development database and never make live AI API calls.
+There are 143 automated tests covering domain rules, service transactions, authenticated HTTP tools, hold cancellation and expiry, conversation orchestration, scripted scenarios, and the voice bridge. Expiry checks include overlapping sweeps and recovery in a separate process. Tests apply the real migrations to a fresh temporary SQLite database and remove it afterward. They never reset the development database and never make live AI API calls.
 
 The app uses system fonts, so production builds do not require a Google Fonts download.
+
+If the local environment prevents Turbopack's CSS worker from binding its internal port (`Operation not permitted`), use the supported alternative `npm run build -- --webpack`. The default build command still uses Turbopack.
 
 ## Implementation status
 
@@ -86,7 +100,7 @@ The app uses system fonts, so production builds do not require a Google Fonts do
 
 The current simulator keeps model conversation context in the server process. It expires when that process restarts. The database persists bookings, holds, support cases, sessions, and audit events. A support case is an escalation record, not a connection to a staffed contact centre.
 
-Voice context is also held in the server process and its visible transcript in the browser. Normal disconnect, declining a held flight, and support escalation release unconfirmed holds. Page-leave cleanup is best effort; a durable expiry worker and crash recovery remain deployment prerequisites.
+Voice context is also held in the server process and its visible transcript in the browser. Normal disconnect, declining a held flight, and support escalation release unconfirmed holds. Page-leave cleanup is best effort; `holds:expire` recovers overdue holds from the database after a restart. Scheduling that recovery and restoring conversation context remain deployment prerequisites.
 
 ## Code map
 

@@ -379,19 +379,18 @@ export interface ExpireHoldResult {
 
 /**
  * Releases the reserved seat and puts the conversation back in front of the
- * option list. n8n will call this on a timer in a later phase.
+ * option list. Repeated and early timer deliveries leave inventory unchanged.
  */
-export async function expireHold(input: ExpireHoldInput): Promise<ExpireHoldResult> {
+export async function expireHold(input: ExpireHoldInput, now: Date = new Date()): Promise<ExpireHoldResult> {
   return prisma.$transaction(async (tx) => {
     const hold = await holdRepository.findById(tx, input.holdId);
     if (!hold) {
       throw new DomainError(ErrorCode.INVALID_STATE, "Unknown hold.");
     }
-    if (hold.status !== "ACTIVE") {
-      throw new DomainError(ErrorCode.INVALID_STATE, "Only an active hold can expire.");
-    }
-
     const session = await sessionRepository.findByActiveHold(tx, hold.id);
+    if (hold.status !== "ACTIVE" || hold.expiresAt.getTime() > now.getTime()) {
+      return { holdId: hold.id, seatReleased: false, sessionId: session?.id ?? null };
+    }
     await releaseAndRewind(tx, hold, session, "EXPIRED");
 
     return {
@@ -407,8 +406,8 @@ export async function expireDueHolds(now: Date = new Date()): Promise<string[]> 
   const due = await holdRepository.findDue(prisma, now);
   const expired: string[] = [];
   for (const hold of due) {
-    await expireHold({ holdId: hold.id });
-    expired.push(hold.id);
+    const result = await expireHold({ holdId: hold.id }, now);
+    if (result.seatReleased) expired.push(hold.id);
   }
   return expired;
 }
