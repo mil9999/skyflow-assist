@@ -1,12 +1,10 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { POST } from "../src/app/api/simulator/demo/route";
-import { clearConversations } from "../src/agent/conversation-store";
 import { prisma } from "../src/server/db/prisma";
 import { resetDatabase, seedScenario } from "./helpers/fixtures";
 
 beforeEach(async () => {
-  clearConversations();
   await resetDatabase();
   await seedScenario();
   vi.stubEnv("NODE_ENV", "development");

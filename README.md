@@ -18,6 +18,8 @@ Open [the simulator](http://localhost:3000/simulator) or [the disruption board](
 
 `setup:demo` creates an ignored local `.env`, generates a tool access key, applies database migrations, and seeds an empty demo database with tomorrow's flights. It preserves existing application data on later runs. It only supports the local `file:./dev.db` database.
 
+After pulling changes with a database migration, run `npm run setup:demo` again and restart the development server. Existing fictional bookings are preserved.
+
 The new local environment uses `TEXT_AGENT_PROVIDER=fake` and enables development-only demo resets. Interactive fake-provider replies are canned; use the three **scripted scenario** buttons to see complete backend workflows. The scenarios explicitly restore the fictional data before running and make no AI API calls.
 
 ## Try the passenger journeys
@@ -78,7 +80,7 @@ npm run lint
 npm run build
 ```
 
-There are 143 automated tests covering domain rules, service transactions, authenticated HTTP tools, hold cancellation and expiry, conversation orchestration, scripted scenarios, and the voice bridge. Expiry checks include overlapping sweeps and recovery in a separate process. Tests apply the real migrations to a fresh temporary SQLite database and remove it afterward. They never reset the development database and never make live AI API calls.
+There are 149 automated tests covering domain rules, service transactions, authenticated HTTP tools, hold cancellation and expiry, persistent text conversations, scripted scenarios, and the voice bridge. Recovery checks use separate Node processes; overlapping and stale text turns are refused before calling the model. Tests apply the real migrations to a fresh temporary SQLite database and remove it afterward. They never reset the development database and never make live AI API calls.
 
 The app uses system fonts, so production builds do not require a Google Fonts download.
 
@@ -93,14 +95,17 @@ If the local environment prevents Turbopack's CSS worker from binding its intern
 | Authenticated webhook tool routes | Implemented |
 | Text simulator, agent tool loop, and scripted scenarios | Implemented |
 | Browser voice through ElevenLabs | Local integration implemented; live agent tested through text mode; spoken audio check pending |
-| Employee monitoring, persistent transcripts, and takeover | Pending; the current inspector is a developer tool |
+| Persistent text context and transcript | Implemented for completed turns; interrupted turns require a new conversation |
+| Employee monitoring and takeover | Pending; the current inspector is a developer tool |
 | Live-model quality evaluation | Pending; existing conversation tests use scripted model responses |
 | Hosted deployment | Pending; needs durable storage, session handling, and access controls |
 | Telephone channel | Optional later milestone |
 
-The current simulator keeps model conversation context in the server process. It expires when that process restarts. The database persists bookings, holds, support cases, sessions, and audit events. A support case is an escalation record, not a connection to a staffed contact centre.
+The simulator saves completed turns in SQLite, including model history, the transcript, option mappings, and confirmation context. An open browser can continue the same conversation after a server restart. Overlapping or stale requests receive HTTP 409 before a model or tool call. A turn interrupted before its checkpoint remains locked: start a new conversation and use `holds:expire` for abandoned seats once their deadlines pass. The UI still starts a new conversation when the page reloads; there is no history browser yet. Demo reset deletes saved conversations along with the fictional sessions.
 
-Voice context is also held in the server process and its visible transcript in the browser. Normal disconnect, declining a held flight, and support escalation release unconfirmed holds. Page-leave cleanup is best effort; `holds:expire` recovers overdue holds from the database after a restart. Scheduling that recovery and restoring conversation context remain deployment prerequisites.
+The database also persists bookings, holds, support cases, sessions, and audit events. Stored conversations include fictional passenger details and remain in the ignored local database. A support case is an escalation record, not a connection to a staffed contact centre.
+
+Voice context remains in the server process and its visible transcript in the browser. Normal disconnect, declining a held flight, and support escalation release unconfirmed holds. Page-leave cleanup is best effort; `holds:expire` recovers overdue holds from the database after a restart. Scheduling that recovery and restoring voice conversation context remain deployment prerequisites.
 
 ## Code map
 

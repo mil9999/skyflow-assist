@@ -30,7 +30,7 @@ export async function POST(request: Request): Promise<Response> {
   const createdResponse = await startSession();
   if (!createdResponse.ok) return createdResponse;
   const created = await createdResponse.json();
-  const conversation = getConversation(created.conversationId);
+  const conversation = await getConversation(created.conversationId);
   if (!conversation) throw new Error("Demo conversation was not created.");
   const trace: TraceStep[] = [...created.trace];
 

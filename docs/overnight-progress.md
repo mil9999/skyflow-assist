@@ -30,12 +30,22 @@ Updated: 5 November 2026. Repository: `mil9999/skyflow-assist` (public). Current
 
 ## Next work
 
-1. Add persistent conversation context/transcripts, then an employee monitoring/takeover interface. Start with the stored conversation history and ensure takeover blocks further AI booking actions.
+1. Add an employee monitoring/takeover interface backed by persisted text history and backend session/audit records. Ensure takeover blocks further AI booking actions; extend persistence to voice context/transcripts separately.
 2. Add repeatable live-model evaluation across the passenger journeys; individual successful live runs do not establish reliability.
 3. Validate microphone speech recognition, audio, interruptions, and live expired-hold recovery. The live agent's rebooking tools have been exercised through text mode. See `voice-setup.md`; do not print credentials or commit `.env`.
 4. Prepare hosted storage, session handling, a scheduled expiry worker, and access controls before deployment.
 
-The current text and voice backends keep conversation context in memory. The voice transcript lives in the browser. Support cases are records, not a live contact-centre connection. Overdue holds can now be recovered from the database with `holds:expire`, but scheduling expiry, restoring conversations, and application authentication are required before hosted voice is enabled.
+## Persistent text conversation milestone (5 November)
+
+- Added an additive migration for server-only text conversation checkpoints linked to airline sessions. Completed turns store model input/output history, the transcript, option mappings including price, and confirmation context.
+- Conversation lookup now reads from SQLite. An open simulator can continue after a server restart using its existing conversation ID. Reloading the browser page still creates a new conversation; no history browser or employee dashboard has been added yet.
+- Added a database-backed turn lock and optimistic version check before model/tool execution. Concurrent and stale requests return HTTP 409. If a process stops mid-turn, the lock stays set and the conversation cannot replay possibly committed tools; start a new conversation and sweep overdue holds. Automatic mid-turn recovery is outside this checkpoint.
+- Restored contexts read the authoritative backend hold state so an expiry sweep cannot resurrect a held seat. Confirmation now clears the session's active-hold navigation pointer in the same booking transaction. Confirmed inventory remains reserved for the booking.
+- Demo session deletion cascades to stored text checkpoints, keeping resets from reviving prior history. Only fictional local data is used; no model API calls are made by automated checks.
+- Validation: all 149 tests pass, including recovery and confirmation in a separate Node process, overlapping/stale turn refusal, interrupted-process HTTP conflicts, external expiry, handled configuration errors, and reset deletion. Lint and TypeScript pass; `npm run build -- --webpack` passes. The default Turbopack environment restriction described above remains.
+- Applied the additive migration to the local demo with `setup:demo` after taking a temporary database backup. All pre-existing application table row counts were unchanged; fictional bookings were not reset. Restart the development server to load the regenerated Prisma client.
+
+Text context now survives completed-turn server restarts. Voice context remains in memory and the voice transcript in the browser. Support cases are records, not a live contact-centre connection. Overdue holds can be recovered from the database with `holds:expire`, but scheduling expiry, restoring voice conversations, employee takeover, and application authentication are required before hosted voice is enabled.
 
 Work is tracked in draft [PR #1](https://github.com/mil9999/skyflow-assist/pull/1). Keep it reviewable and update its description when scope changes.
 

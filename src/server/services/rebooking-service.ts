@@ -221,7 +221,7 @@ export async function confirmRebooking(input: ConfirmInput): Promise<ConfirmResu
     await holdRepository.confirm(tx, hold.id);
 
     assertTransitionAllowed(session.state, "REBOOKED");
-    await sessionRepository.transition(tx, session.id, "REBOOKED");
+    await sessionRepository.transition(tx, session.id, "REBOOKED", { activeHoldId: null });
 
     const result: ConfirmResult = {
       success: true,

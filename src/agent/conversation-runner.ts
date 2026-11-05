@@ -5,6 +5,7 @@ import {
   type ModelProvider,
 } from "@/server/llm/provider";
 import { redact } from "./redact";
+import { beginConversationTurn, completeConversationTurn } from "./conversation-store";
 import { SYSTEM_PROMPT } from "./system-prompt";
 import { AGENT_TOOLS } from "./tool-definitions";
 import { executeTool, getSessionState } from "./tool-executor";
@@ -44,6 +45,13 @@ const APOLOGY =
  * text or we hit the step ceiling.
  */
 export async function runTurn(options: RunTurnOptions): Promise<RunTurnResult> {
+  await beginConversationTurn(options.conversation);
+  const result = await runLockedTurn(options);
+  await completeConversationTurn(options.conversation);
+  return result;
+}
+
+async function runLockedTurn(options: RunTurnOptions): Promise<RunTurnResult> {
   const { conversation, userMessage, provider, model } = options;
   const maxSteps = options.maxSteps ?? MAX_STEPS;
   const trace: TraceStep[] = [];

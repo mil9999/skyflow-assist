@@ -87,8 +87,22 @@ model ConversationSession {
   events             AuditEvent[]
   supportCases       SupportCase[]
   idempotencyRecords IdempotencyRecord[]
+  textConversation   TextConversation?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
+}
+
+// Completed text turns and their server-only tool context. An interrupted turn
+// stays locked rather than replaying a possibly committed booking operation.
+model TextConversation {
+  id        String              @id
+  sessionId String              @unique
+  snapshot  String // JSON: model history, transcript, opaque option mappings
+  version   Int                 @default(0)
+  busy      Boolean             @default(false)
+  session   ConversationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
 }
 
 model SupportCase {
