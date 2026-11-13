@@ -88,7 +88,9 @@ npm run lint
 npm run build
 ```
 
-There are 165 automated tests covering domain rules, transactional rebooking, authenticated tools, hold cancellation and expiry, persistent text and voice context, employee takeover, shared messages, and scripted scenarios. Recovery checks use separate Node processes. Tests apply the real migrations to a fresh temporary SQLite database and remove it afterward. They never reset the development database and never make live AI API calls.
+There are 172 automated tests covering domain rules, transactional rebooking, authenticated tools, hold cancellation and expiry, persistent text and voice context, employee takeover, shared messages, and scripted scenarios. Recovery checks use separate Node processes. Tests apply the real migrations to a fresh temporary SQLite database and remove it afterward. They never reset the development database and never make live AI API calls.
+
+Run `npm run eval:voice -- --offline` to rehearse the evaluation harness without AI calls. Opt into billable ElevenLabs checks with `npm run eval:voice -- --live --scenario rebooking --runs 1` (Node.js 22+). Every evaluation gets a disposable migrated database. The initial live matrix covers rebooking after an ambiguous answer, no alternatives, and failed identity verification. One sample of each passed on 13 November; these samples do not establish reliability. See [evaluation commands, checks, and limits](docs/voice-evaluation.md).
 
 The app uses system fonts, so production builds do not require a Google Fonts download.
 
@@ -107,7 +109,7 @@ If the local environment prevents Turbopack's CSS worker from binding its intern
 | Persistent voice tool context and transcript | Implemented; completed calls survive backend restarts, remote call resumption after page reload remains pending |
 | Employee monitoring and takeover | Local demo implemented; shared text assistance and backend ownership checks |
 | Local automatic hold expiry | Development startup sweep and 30-second worker implemented; hosted scheduling pending |
-| Live-model quality evaluation | Pending; existing conversation tests use scripted model responses |
+| Live-model quality evaluation | Repeatable three-scenario harness implemented; initial live samples pass, broader reliability and spoken evaluation pending |
 | Hosted deployment | Pending; needs durable storage, session handling, and access controls |
 | Telephone channel | Optional later milestone |
 
@@ -128,6 +130,7 @@ Voice option mappings, confirmation context, completed tool responses, and close
 - `src/server/voice/` and `src/server/conversations/`: persistent voice tools and safe passenger transcript views.
 - `prisma/`: schema, migrations, and fictional seed data.
 - `tests/`: automated checks and isolated database setup.
+- `src/evaluation/` and `scripts/evaluate-voice*`: opt-in live voice checks and offline harness rehearsals.
 - [Voice setup](docs/voice-setup.md) and [webhook map](docs/elevenlabs-tools.md): credentials and intended voice-tool configuration.
 
 Real airline/GDS APIs, real passenger records, payments, refunds, compensation, loyalty, outbound email, and telephony are outside the current demo scope.

@@ -1,0 +1,19 @@
+{
+  "date": "2026-11-13",
+  "provider": "ElevenLabs dedicated SkyFlow Assist agent",
+  "transport": "official client SDK text-only WebSocket",
+  "sdkVersion": "1.28.0",
+  "database": "fresh migrated temporary SQLite database per scenario",
+  "sampleSizePerScenario": 1,
+  "results": [
+    { "scenario": "rebooking", "outcome": "passed", "durationMs": 16229, "stepsPassed": 4, "checksPassed": 16 },
+    { "scenario": "no-alternatives", "outcome": "passed", "durationMs": 8031, "stepsPassed": 1, "checksPassed": 6 },
+    { "scenario": "failed-verification", "outcome": "passed", "durationMs": 9466, "stepsPassed": 2, "checksPassed": 14 }
+  ],
+  "limits": [
+    "Individual samples; no reliability estimate.",
+    "Configured remote model was not pinned or captured by this evaluator.",
+    "Reply completion uses a two-second quiet interval after a post-tool response.",
+    "No microphone, audio, interruption, live expired-hold, or employee takeover evaluation in this sample."
+  ]
+}
