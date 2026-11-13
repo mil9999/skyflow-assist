@@ -23,7 +23,7 @@ export async function evaluateConfiguredVoiceScenario(scenario: VoiceEvaluationS
   if (configuration.fingerprint !== after.fingerprint) {
     return { ...result, passed: false, outcome: "inconclusive", reason: "AGENT_CONFIGURATION_CHANGED", configurationBefore: configuration, configurationAfter: after };
   }
-  return { ...result, outcome: result.outcome ?? (result.passed ? "passed" : "failed"), configuration };
+  return { ...result, configuration };
 }
 
 /** Caller must supply a disposable, migrated database before importing Prisma. */

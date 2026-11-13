@@ -38,7 +38,7 @@ export class ElevenLabsEvaluationTransport implements EvaluationTransport {
         onDisconnect: ({ reason }) => {
           if (reason === "error") this.fail("ElevenLabs disconnected unexpectedly.");
           else if (this.pending) {
-            if (this.replies.length && this.activeTools === 0) this.complete();
+            if (this.replies.length && this.replyAfterTools && this.activeTools === 0) this.complete();
             else this.fail("The agent disconnected before completing its reply.");
           }
         },

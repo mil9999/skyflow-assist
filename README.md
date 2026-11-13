@@ -88,7 +88,7 @@ npm run lint
 npm run build
 ```
 
-There are 197 automated tests covering domain rules, transactional rebooking, authenticated tools, hold cancellation and expiry, persistent text and voice context, employee takeover, shared messages, and scripted scenarios. Recovery checks use separate Node processes. Tests apply the real migrations to a fresh temporary SQLite database and remove it afterward. They never reset the development database and never make live AI API calls.
+There are 201 automated tests covering domain rules, transactional rebooking, authenticated tools, hold cancellation and expiry, persistent text and voice context, employee takeover, shared messages, and scripted scenarios. Recovery checks use separate Node processes. Tests apply the real migrations to a fresh temporary SQLite database and remove it afterward. They never reset the development database and never make live AI API calls.
 
 Run `npm run eval:voice -- --offline` to rehearse the evaluation harness without AI calls. Opt into billable ElevenLabs checks with `npm run eval:voice -- --live --scenario rebooking --runs 1` (Node.js 22+). Every evaluation gets a disposable migrated database. The evaluator covers rebooking after an ambiguous answer, no alternatives, failed identity verification, expired-hold recovery, employee takeover, varied unclear approval, and declining a held flight. Reports capture the configured agent and reject configuration drift. The latest 14-case live batch recorded six passes and eight inconclusive connection failures; an isolated cancellation retry was also inconclusive. Repeated reliability and that new cancellation case remain unverified. See [evaluation commands, results, and limits](docs/voice-evaluation.md).
 
