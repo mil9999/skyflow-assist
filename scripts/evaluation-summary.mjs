@@ -1,4 +1,9 @@
 /** Summarize only sanitized worker results. Never ingest provider responses. */
+export function shouldStopLiveBatch(results) {
+  const connectionReasons = new Set(["CONNECTION_FAILED", "CONNECTION_REJECTED", "PROVIDER_ERROR", "TRANSPORT_DISCONNECTED", "AGENT_CONFIGURATION_UNAVAILABLE"]);
+  return results.length >= 2 && results.slice(-2).every((result) => result.outcome === "inconclusive" && connectionReasons.has(result.reason));
+}
+
 export function summarizeEvaluation(results, live) {
   const totals = { passed: 0, failed: 0, inconclusive: 0 };
   const scenarios = {};

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import nextEnv from "@next/env";
-import { summarizeEvaluation } from "./evaluation-summary.mjs";
+import { summarizeEvaluation, shouldStopLiveBatch } from "./evaluation-summary.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const scenarios = ["rebooking", "no-alternatives", "failed-verification", "expired-hold", "employee-takeover", "unclear-approval", "declined-hold"];
@@ -32,9 +32,11 @@ nextEnv.loadEnvConfig(root);
 const revision = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).stdout?.trim() ?? "unknown";
 const dirty = Boolean(spawnSync("git", ["status", "--porcelain"], { cwd: root, encoding: "utf8" }).stdout?.trim());
 const results = [];
+let connectionBlocked = false;
 const deadline = Date.now() + maxMinutes * 60_000;
 for (let run = 1; run <= runs; run++) {
   for (const scenario of selected === "all" ? scenarios : [selected]) {
+    if (connectionBlocked) { results.push({ run, scenario, outcome: "inconclusive", reason: "BATCH_CONNECTION_BLOCKED" }); continue; }
     if (Date.now() >= deadline) { results.push({ run, scenario, outcome: "inconclusive", reason: "BATCH_TIME_LIMIT" }); continue; }
     const directory = mkdtempSync(join(tmpdir(), "skyflow-evaluation-"));
     const database = join(directory, "evaluation.db");
@@ -51,10 +53,11 @@ for (let run = 1; run <= runs; run++) {
       results.push({ run, scenario, mode, outcome: "inconclusive", ...(Date.now() >= deadline ? { reason: "BATCH_TIME_LIMIT" } : {}), error: "Evaluation setup, transport, or process timeout failed. No success is claimed." });
     } finally { rmSync(directory, { recursive: true, force: true }); }
     if (mode === "live") console.error(`${scenario} run ${run}/${runs}: ${results.at(-1).outcome}`);
+    if (mode === "live" && shouldStopLiveBatch(results)) { connectionBlocked = true; console.error("Stopping live connections after two consecutive provider/connection failures; remaining runs are inconclusive."); }
   }
 }
 const summary = summarizeEvaluation(results, mode === "live");
-const report = JSON.stringify({ mode: mode === "live" ? "live-elevenlabs-text" : "offline-scripted", startedAt: new Date(deadline - maxMinutes * 60_000).toISOString(), results, summary, passed: summary.passed }, null, 2);
+const report = JSON.stringify({ mode: mode === "live" ? "live-elevenlabs-text" : "offline-scripted", startedAt: new Date(deadline - maxMinutes * 60_000).toISOString(), sourceRevision: revision, worktreeDirty: dirty, results, summary, passed: summary.passed }, null, 2);
 console.log(report);
 if (reportFile !== undefined) {
   try { writeFileSync(reportFile, report + "\n"); }

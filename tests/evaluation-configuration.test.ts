@@ -1,11 +1,12 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { VOICE_SYSTEM_PROMPT } from "../src/agent/system-prompt";
 import { snapshotAgentConfiguration, getEvaluationAgentConfiguration } from "../src/evaluation/agent-configuration";
-import { summarizeEvaluation } from "../scripts/evaluation-summary.mjs";
+import { summarizeEvaluation, shouldStopLiveBatch } from "../scripts/evaluation-summary.mjs";
 import { evaluateConfiguredVoiceScenario } from "../src/evaluation/voice-runner";
 import { ScriptedEvaluationTransport } from "../src/evaluation/scripted-transport";
 import { VOICE_EVALUATION_SCENARIOS } from "../src/evaluation/voice-scenarios";
 import { prisma } from "../src/server/db/prisma";
+import { EvaluationTransportError } from "../src/evaluation/transport-error";
 
 const fixture = () => ({
   name: "SkyFlow Assist", agent_id: "private-agent-selector", version_id: "private-version-selector",
@@ -67,9 +68,39 @@ describe("evaluation configuration", () => {
     expect(report).toMatchObject({ outcome: "inconclusive", passed: false, reason: "AGENT_CONFIGURATION_CHANGED" });
     expect(report.steps.every((step) => step.checks.every((check) => check.passed))).toBe(true);
   });
+  it("preserves configuration and partial checks when a later connection fails", async () => {
+    const configuration = snapshotAgentConfiguration(fixture());
+    const read = vi.fn().mockResolvedValue(configuration);
+    const scenario = VOICE_EVALUATION_SCENARIOS[0];
+    const scripted = new ScriptedEvaluationTransport(scenario.id);
+    let turns = 0;
+    const report = await evaluateConfiguredVoiceScenario(scenario, {
+      start: (tool) => scripted.start(tool), end: () => scripted.end(),
+      exchange: () => ++turns === 2 ? Promise.reject(new EvaluationTransportError("CONNECTION_REJECTED", 3000)) : scripted.exchange(),
+    }, read);
+    expect(report).toMatchObject({ outcome: "inconclusive", reason: "CONNECTION_REJECTED", connectionCloseCode: 3000, configuration });
+    expect(report.steps).toHaveLength(1);
+    expect(read).toHaveBeenCalledTimes(2);
+  });
+  it("cannot claim success when the ending configuration cannot be checked", async () => {
+    const configuration = snapshotAgentConfiguration(fixture());
+    const read = vi.fn().mockResolvedValueOnce(configuration).mockRejectedValueOnce(new Error("AGENT_CONFIGURATION_UNAVAILABLE"));
+    const scenario = VOICE_EVALUATION_SCENARIOS.find((item) => item.id === "no-alternatives")!;
+    const report = await evaluateConfiguredVoiceScenario(scenario, new ScriptedEvaluationTransport(scenario.id), read);
+    expect(report).toMatchObject({ outcome: "inconclusive", passed: false, reason: "AGENT_CONFIGURATION_UNAVAILABLE", configurationBefore: configuration });
+    expect(summarizeEvaluation([report], true).passed).toBe(false);
+  });
 });
 
 describe("evaluation batch summary", () => {
+  it("stops new connections after consecutive provider failures without skipping a policy failure", () => {
+    const failure = { outcome: "inconclusive", reason: "CONNECTION_REJECTED" };
+    expect(shouldStopLiveBatch([failure])).toBe(false);
+    expect(shouldStopLiveBatch([failure, failure])).toBe(true);
+    expect(shouldStopLiveBatch([failure, { outcome: "passed" }, failure])).toBe(false);
+    expect(shouldStopLiveBatch([failure, { outcome: "failed" }])).toBe(false);
+    expect(shouldStopLiveBatch([failure, { outcome: "inconclusive", reason: "LOCAL_TOOL_FAILED" }])).toBe(false);
+  });
   it("counts failures and inconclusive runs separately", () => {
     const result = summarizeEvaluation([
       { scenario: "one", outcome: "passed" },

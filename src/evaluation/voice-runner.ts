@@ -5,6 +5,7 @@ import { resetDemoScenario } from "../server/demo/scenario";
 import { expireDueHolds } from "../server/services/rebooking-service";
 import { takeOver } from "../server/employee/service";
 import { getEvaluationAgentConfiguration } from "./agent-configuration";
+import { evaluationFailure } from "./transport-error";
 import type { EvaluationToolCall, VoiceEvaluationScenario } from "./voice-scenarios";
 
 export interface EvaluationTransport {
@@ -16,11 +17,13 @@ export interface EvaluationTransport {
 export async function evaluateConfiguredVoiceScenario(scenario: VoiceEvaluationScenario, transport: EvaluationTransport, readConfiguration = getEvaluationAgentConfiguration) {
   const configuration = await readConfiguration();
   const result = await evaluateVoiceScenario(scenario, transport);
-  const after = await readConfiguration();
+  let after;
+  try { after = await readConfiguration(); }
+  catch (error) { return { ...result, passed: false, outcome: "inconclusive", ...evaluationFailure(error), configurationBefore: configuration }; }
   if (configuration.fingerprint !== after.fingerprint) {
     return { ...result, passed: false, outcome: "inconclusive", reason: "AGENT_CONFIGURATION_CHANGED", configurationBefore: configuration, configurationAfter: after };
   }
-  return { ...result, outcome: result.passed ? "passed" : "failed", configuration };
+  return { ...result, outcome: result.outcome ?? (result.passed ? "passed" : "failed"), configuration };
 }
 
 /** Caller must supply a disposable, migrated database before importing Prisma. */
@@ -80,7 +83,10 @@ export async function evaluateVoiceScenario(scenario: VoiceEvaluationScenario, t
       // Stop at the first failure. Later steps could hide a premature change.
       if (checks.some((item) => !item.passed)) break;
     }
-    return { scenario: scenario.id, passed: steps.length === scenario.steps.length && steps.every((step) => step.checks.every((item) => item.passed)), durationMs: Date.now() - started, steps };
+    const passed = steps.length === scenario.steps.length && steps.every((step) => step.checks.every((item) => item.passed));
+    return { scenario: scenario.id, passed, outcome: passed ? "passed" : "failed", durationMs: Date.now() - started, steps };
+  } catch (error) {
+    return { scenario: scenario.id, passed: false, outcome: "inconclusive", durationMs: Date.now() - started, steps, ...evaluationFailure(error) };
   } finally {
     try { await disconnect(); }
     finally { await endVoiceSession(conversationId); }

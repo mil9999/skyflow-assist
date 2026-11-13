@@ -1,7 +1,8 @@
-import { Conversation, type TextConversation } from "@elevenlabs/client";
+import { Conversation, SessionConnectionError, type TextConversation } from "@elevenlabs/client";
 import { AGENT_TOOL_NAMES } from "../agent/tool-definitions";
 import { getSignedVoiceUrl } from "../server/voice/elevenlabs";
 import type { EvaluationTransport } from "./voice-runner";
+import { EvaluationTransportError } from "./transport-error";
 
 /** Text-only official SDK: no microphone, audio devices, or browser required. */
 export class ElevenLabsEvaluationTransport implements EvaluationTransport {
@@ -43,8 +44,11 @@ export class ElevenLabsEvaluationTransport implements EvaluationTransport {
         },
       });
       await greeting;
-    } catch {
-      this.fail(this.failure?.message ?? "Could not start the live ElevenLabs evaluation. Check credentials, agent access, and network connectivity.");
+    } catch (error) {
+      const closeCode = error instanceof SessionConnectionError && Number.isInteger(error.closeCode) && error.closeCode! >= 1000 && error.closeCode! <= 4999 ? error.closeCode : undefined;
+      this.fail(this.failure ?? (closeCode === undefined
+        ? "Could not start the live ElevenLabs evaluation. Check credentials, agent access, and network connectivity."
+        : new EvaluationTransportError("CONNECTION_REJECTED", closeCode)));
       throw this.failure;
     }
   }
@@ -78,8 +82,8 @@ export class ElevenLabsEvaluationTransport implements EvaluationTransport {
     this.pending = undefined; clearTimeout(pending.deadline); this.cancelQuiet();
     pending.resolve(this.replies.join("\n"));
   }
-  private fail(message: string) {
-    this.failure = new Error(message);
+  private fail(message: string | Error) {
+    this.failure = typeof message === "string" ? new Error(message) : message;
     const pending = this.pending; this.pending = undefined;
     if (pending) { clearTimeout(pending.deadline); pending.reject(this.failure); }
     this.cancelQuiet();
