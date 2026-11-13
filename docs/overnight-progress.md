@@ -60,6 +60,16 @@ Updated: 13 November 2026 (Europe/Paris overnight window). Repository: `mil9999/
 - Both new live samples passed: **expired hold, 5 steps / 20 checks / 20.819 s**; **employee takeover, 3 steps / 18 checks / 13.423 s**. The expired confirmation was refused before search/rehold, and the replacement was confirmed once only after fresh approval. The delayed takeover probe was refused, the agent directed the passenger to text, and the held seat survived AI disconnect.
 - Final validation: **176 tests in 15 files pass**, lint and TypeScript pass, and `npm run build -- --webpack` passes with all 24 generated pages. The saved development database was untouched; all evaluation databases were disposable. Updated README, voice instructions, evaluator documentation, and the sanitized five-scenario sample summary. Five single samples remain a smoke check, not a reliability estimate.
 
+## One-hour manual session: configuration capture and approval variants (13 November)
+
+The user explicitly requested a new one-hour work session after the overnight window. This manual session is separate from the recurring 00:00–05:00 Europe/Paris schedule.
+
+- Expanded the evaluator to seven scenarios, adding several unclear approval phrases and a decline/replacement journey. Declined-seat checks inspect restored SF218 inventory and the single SF224 reservation/confirmation, rather than relying on an agent's release claim.
+- Added whitelisted configuration snapshots through the official ElevenLabs Get agent API before/after each live run: configured model, generation/fallback settings, and prompt/greeting/tool-reference/revision hashes. Credentials, private account selectors, provider response extras and raw prompts are excluded. The remote prompt must match the shared `VOICE_SYSTEM_PROMPT`; configuration drift during a run is inconclusive, and mixed fingerprints prevent overall batch success.
+- Reports now include Node/SDK versions and the source revision/dirty status at batch start. They support a non-overwriting `--output` file, separate pass/fail/inconclusive counts, per-scenario failed checks, and a batch time limit (15 minutes by default, configurable 1–30). Offline rehearsals pass all seven cases.
+- Validation before the repeated live matrix: **192 tests in 16 files pass**, including configuration drift, private-field exclusion, false release claims and report overwrite refusal. TypeScript, lint and the production Webpack build pass. The shared voice prompt refactor preserves the existing instruction text; no remote prompt/model change is included.
+- A new repeated live matrix is the next verification step. The earlier five one-off samples remain historical; new configuration data will not be attributed to them retroactively.
+
 ## Next concrete work
 
 1. Broaden ambiguous/declined approval phrasing, capture agent/model configuration, and repeat a fixed evaluation matrix. The current local environment has ElevenLabs credentials but no OpenAI text-model key; do not expose either. Keep live runs explicitly opt-in and reports free of credentials, signed URLs, airline IDs, and full transcripts.

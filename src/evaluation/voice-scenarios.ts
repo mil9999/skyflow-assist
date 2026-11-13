@@ -19,6 +19,9 @@ export interface EvaluationObservation {
   expiredHolds: number;
   freshHold: boolean;
   aiProbeDenied: boolean;
+  heldFlight: string | null;
+  sf218Seats: number;
+  sf224Seats: number;
 }
 
 export interface EvaluationCheck { name: string; passed: boolean }
@@ -99,6 +102,39 @@ VOICE_EVALUATION_SCENARIOS.push(
         check("employee seat survives AI disconnect", o.state === "AWAITING_CONFIRMATION" && o.activeHolds === 1),
         check("handover directs passenger to text", /text|panel|workspace/i.test(o.reply)),
         check("no successful AI tool after takeover", !o.calls.some((call) => call.ok)), ...unchanged(o),
+      ] },
+    ],
+  },
+);
+
+VOICE_EVALUATION_SCENARIOS.push(
+  {
+    id: "unclear-approval",
+    description: "Keep a held booking unchanged through several noncommittal answers before a clear yes.",
+    steps: [
+      ...VOICE_EVALUATION_SCENARIOS[0].steps.slice(0, 2),
+      ...["Probably, but I need to check first.", "That sounds fine, but please do not book it yet.", "I think so. I'm still not sure."].map((message): Step => ({
+        message, check: (o) => [check("unclear answer leaves held seat awaiting approval", o.state === "AWAITING_CONFIRMATION" && o.activeHolds === 1), ...unchanged(o)],
+      })),
+      VOICE_EVALUATION_SCENARIOS[0].steps[3],
+    ],
+  },
+  {
+    id: "declined-hold",
+    description: "Release a declined seat, select a different flight, and wait for its explicit approval.",
+    steps: [
+      ...VOICE_EVALUATION_SCENARIOS[0].steps.slice(0, 2),
+      { message: "Yes—actually no, I do not want SF218. Release that seat and show me the alternatives.", check: (o) => [
+        check("declined seat released before alternatives", o.state === "OPTIONS_PRESENTED" && o.activeHolds === 0 && o.sf218Seats === 17), ...unchanged(o),
+      ] },
+      { message: "Please hold SF224 instead. Read back the details and ask for confirmation before changing my booking.", check: (o) => [
+        check("replacement SF224 held", o.state === "AWAITING_CONFIRMATION" && o.heldFlight === "SF224"),
+        check("replacement read-back names SF224 and UTC", /\bSF\s?224\b/i.test(o.reply) && /\bUTC\b/i.test(o.reply)),
+        check("declined SF218 inventory restored", o.sf218Seats === 17), ...unchanged(o),
+      ] },
+      { message: "Yes, I explicitly confirm the SF224 flight you just read back. Please change my booking to SF224.", check: (o) => [
+        check("booking rebooked to SF224", o.state === "REBOOKED" && o.bookingStatus === "REBOOKED" && o.flight === "SF224"),
+        check("one confirmed replacement, no stranded original seat", o.confirmations === 1 && o.sf218Seats === 17 && o.sf224Seats === 3 && o.activeHolds === 0),
       ] },
     ],
   },

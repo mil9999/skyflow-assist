@@ -88,9 +88,9 @@ npm run lint
 npm run build
 ```
 
-There are 176 automated tests covering domain rules, transactional rebooking, authenticated tools, hold cancellation and expiry, persistent text and voice context, employee takeover, shared messages, and scripted scenarios. Recovery checks use separate Node processes. Tests apply the real migrations to a fresh temporary SQLite database and remove it afterward. They never reset the development database and never make live AI API calls.
+There are 192 automated tests covering domain rules, transactional rebooking, authenticated tools, hold cancellation and expiry, persistent text and voice context, employee takeover, shared messages, and scripted scenarios. Recovery checks use separate Node processes. Tests apply the real migrations to a fresh temporary SQLite database and remove it afterward. They never reset the development database and never make live AI API calls.
 
-Run `npm run eval:voice -- --offline` to rehearse the evaluation harness without AI calls. Opt into billable ElevenLabs checks with `npm run eval:voice -- --live --scenario rebooking --runs 1` (Node.js 22+). Every evaluation gets a disposable migrated database. The initial live matrix covers rebooking after an ambiguous answer, no alternatives, failed identity verification, expired-hold recovery, and employee takeover. One sample of each passed on 13 November; these samples do not establish reliability. See [evaluation commands, checks, and limits](docs/voice-evaluation.md).
+Run `npm run eval:voice -- --offline` to rehearse the evaluation harness without AI calls. Opt into billable ElevenLabs checks with `npm run eval:voice -- --live --scenario rebooking --runs 1` (Node.js 22+). Every evaluation gets a disposable migrated database. The evaluator covers rebooking after an ambiguous answer, no alternatives, failed identity verification, expired-hold recovery, employee takeover, varied unclear approval, and declining a held flight. Reports capture the configured agent and reject configuration drift. The original five scenarios passed one live sample each on 13 November; broader matrix results are recorded separately and do not establish production reliability. See [evaluation commands, checks, and limits](docs/voice-evaluation.md).
 
 The app uses system fonts, so production builds do not require a Google Fonts download.
 
@@ -109,7 +109,7 @@ If the local environment prevents Turbopack's CSS worker from binding its intern
 | Persistent voice tool context and transcript | Implemented; completed calls survive backend restarts, remote call resumption after page reload remains pending |
 | Employee monitoring and takeover | Local demo implemented; shared text assistance and backend ownership checks |
 | Local automatic hold expiry | Development startup sweep and 30-second worker implemented; hosted scheduling pending |
-| Live-model quality evaluation | Repeatable five-scenario harness implemented; initial live samples pass, broader reliability and spoken evaluation pending |
+| Live-model quality evaluation | Seven-scenario harness with configuration capture implemented; repeated live validation and spoken evaluation tracked separately |
 | Hosted deployment | Pending; needs durable storage, session handling, and access controls |
 | Telephone channel | Optional later milestone |
 

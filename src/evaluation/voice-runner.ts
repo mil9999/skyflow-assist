@@ -4,12 +4,23 @@ import { prisma } from "../server/db/prisma";
 import { resetDemoScenario } from "../server/demo/scenario";
 import { expireDueHolds } from "../server/services/rebooking-service";
 import { takeOver } from "../server/employee/service";
+import { getEvaluationAgentConfiguration } from "./agent-configuration";
 import type { EvaluationToolCall, VoiceEvaluationScenario } from "./voice-scenarios";
 
 export interface EvaluationTransport {
   start: (tool: (name: string, args: Record<string, unknown>) => Promise<string>) => Promise<void>;
   exchange: (message: string) => Promise<string>;
   end: () => Promise<void>;
+}
+
+export async function evaluateConfiguredVoiceScenario(scenario: VoiceEvaluationScenario, transport: EvaluationTransport, readConfiguration = getEvaluationAgentConfiguration) {
+  const configuration = await readConfiguration();
+  const result = await evaluateVoiceScenario(scenario, transport);
+  const after = await readConfiguration();
+  if (configuration.fingerprint !== after.fingerprint) {
+    return { ...result, passed: false, outcome: "inconclusive", reason: "AGENT_CONFIGURATION_CHANGED", configurationBefore: configuration, configurationAfter: after };
+  }
+  return { ...result, outcome: result.passed ? "passed" : "failed", configuration };
 }
 
 /** Caller must supply a disposable, migrated database before importing Prisma. */
@@ -55,7 +66,11 @@ export async function evaluateVoiceScenario(scenario: VoiceEvaluationScenario, t
       const session = await prisma.conversationSession.findUniqueOrThrow({ where: { id: sessionId }, include: { supportCases: true } });
       const reference = scenario.id === "no-alternatives" ? "SKY55T" : "SKY82Q";
       const booking = await prisma.booking.findUniqueOrThrow({ where: { bookingReference: reference }, include: { flight: true } });
+      const held = session.activeHoldId ? await prisma.rebookingHold.findUnique({ where: { id: session.activeHoldId }, include: { newFlight: true } }) : null;
       const checks = step.check({ state: session.state, bookingLinked: Boolean(session.bookingId), bookingStatus: booking.status, flight: booking.flight.flightNumber,
+        heldFlight: held?.status === "ACTIVE" ? held.newFlight.flightNumber : null,
+        sf218Seats: (await prisma.flight.findUniqueOrThrow({ where: { flightNumber: "SF218" } })).availableSeats,
+        sf224Seats: (await prisma.flight.findUniqueOrThrow({ where: { flightNumber: "SF224" } })).availableSeats,
         controller: session.controller, aiProbeDenied, freshHold: Boolean(session.activeHoldId && expiredHoldId && session.activeHoldId !== expiredHoldId),
         activeHolds: await prisma.rebookingHold.count({ where: { bookingId: booking.id, status: "ACTIVE" } }),
         expiredHolds: await prisma.rebookingHold.count({ where: { bookingId: booking.id, status: "EXPIRED" } }),

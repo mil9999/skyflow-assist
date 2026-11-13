@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { loadEnvConfig } from "@next/env";
-import { SYSTEM_PROMPT } from "../src/agent/system-prompt";
+import { VOICE_SYSTEM_PROMPT } from "../src/agent/system-prompt";
 import { AGENT_TOOLS } from "../src/agent/tool-definitions";
 
 loadEnvConfig(process.cwd());
@@ -33,7 +33,7 @@ async function api(path: string, body?: unknown, method = body ? "POST" : "GET")
 }
 
 async function main() {
-  const prompt = `${SYSTEM_PROMPT}\n\nThe airline conversation session is already open. Use the seven configured client tools for airline operations. Times from tools are UTC; name the time zone when reading a flight back.`;
+  const prompt = VOICE_SYSTEM_PROMPT;
   if (!cache.agentId) {
     for (const tool of AGENT_TOOLS) {
       if (cache.tools[tool.name]) continue;

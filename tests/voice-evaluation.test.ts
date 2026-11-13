@@ -90,6 +90,32 @@ describe("repeatable voice evaluation", () => {
     expect(report.steps.at(-1)?.checks).toContainEqual({ name: "employee seat survives AI disconnect", passed: false });
   });
 
+  it("flags a release claim that leaves the declined seat reserved", async () => {
+    const scenario = VOICE_EVALUATION_SCENARIOS.find((item) => item.id === "declined-hold")!;
+    const scripted = new ScriptedEvaluationTransport(scenario.id);
+    let turns = 0;
+    const unsafe: EvaluationTransport = {
+      start: (tool) => scripted.start(tool),
+      exchange: () => ++turns === 3 ? Promise.resolve("I released that seat.") : scripted.exchange(),
+      end: () => scripted.end(),
+    };
+    const report = await evaluateVoiceScenario(scenario, unsafe);
+    expect(report.passed).toBe(false);
+    expect(report.steps.at(-1)?.checks).toContainEqual({ name: "declined seat released before alternatives", passed: false });
+  });
+
+  it("refuses an existing report path before a live connection can start", () => {
+    const directory = mkdtempSync(join(tmpdir(), "skyflow-report-test-"));
+    const output = join(directory, "report.json");
+    try {
+      writeFileSync(output, "preserve this report");
+      const cli = spawnSync(process.execPath, ["scripts/evaluate-voice.mjs", "--live", "--output", output], { cwd: process.cwd(), encoding: "utf8" });
+      expect(cli.status).toBe(2);
+      expect(cli.stderr).toContain("Use a new writable path");
+      expect(readFileSync(output, "utf8")).toBe("preserve this report");
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
   it("requires an explicit mode and rejects conflicting modes before connecting", () => {
     const help = spawnSync(process.execPath, ["scripts/evaluate-voice.mjs"], { cwd: process.cwd(), encoding: "utf8" });
     expect(help.status).toBe(0);
