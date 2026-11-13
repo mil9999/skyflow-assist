@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isDomainError } from "@/domain/errors";
 
 import { ConversationConflictError, getConversation } from "@/agent/conversation-store";
 import { runTurn } from "@/agent/conversation-runner";
@@ -43,6 +44,7 @@ export async function POST(request: Request): Promise<Response> {
       reasoningEffort: agentReasoningEffort(),
     });
   } catch (error) {
+    if (isDomainError(error)) return Response.json({ ok: false, error: error.message, code: error.code }, { status: 409 });
     if (error instanceof ConversationConflictError) {
       return Response.json({ ok: false, error: error.message }, { status: 409 });
     }

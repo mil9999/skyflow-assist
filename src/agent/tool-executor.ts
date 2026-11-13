@@ -69,6 +69,10 @@ export async function getSessionState(sessionId: string): Promise<string | null>
   return session?.state ?? null;
 }
 
+export function getSessionStatus(sessionId: string) {
+  return prisma.conversationSession.findUnique({ where: { id: sessionId }, select: { state: true, controller: true } });
+}
+
 const TERMINAL_STATES = new Set(["REBOOKED", "ESCALATED"]);
 
 export async function executeTool(
@@ -83,7 +87,9 @@ export async function executeTool(
     return failure("BAD_REQUEST", "Those arguments were not valid JSON.", 400);
   }
 
-  const state = await getSessionState(conversation.sessionId);
+  const current = await getSessionStatus(conversation.sessionId);
+  if (current?.controller === "EMPLOYEE") return failure("SESSION_TAKEN_OVER", "An employee has taken over. Stop automated actions and continue in the employee text conversation.");
+  const state = current?.state;
   if (state && TERMINAL_STATES.has(state)) {
     return failure(
       "INVALID_STATE",

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { PassengerThread, useConversationMonitor } from "@/components/passenger-thread";
 
 interface TraceStep {
   type: "MODEL" | "TOOL";
@@ -50,17 +51,19 @@ export default function SimulatorPage() {
   const [error, setError] = useState<string | null>(null);
   const [pendingScenario, setPendingScenario] = useState<"rebook" | "no-options" | "verification-failed" | null>(null);
   const conversationRef = useRef<HTMLDivElement>(null);
+  const monitored = useConversationMonitor(conversationId);
+  const human = monitored?.controller === "EMPLOYEE";
+  const displayedState = monitored?.state ?? state;
+  const displayedHold = monitored?.holdActive ?? holdActive;
 
-  useEffect(() => {
-    void startConversation();
-  }, []);
+  const initialized = useRef(false);
 
   useEffect(() => {
     const panel = conversationRef.current;
     panel?.scrollTo({ top: panel.scrollHeight, behavior: "smooth" });
   }, [messages, busy]);
 
-  async function startConversation() {
+  const startConversation = useCallback(async () => {
     setBusy(true);
     setError(null);
     try {
@@ -69,6 +72,7 @@ export default function SimulatorPage() {
       if (!data.ok) throw new Error(data.error ?? "Could not start a conversation.");
 
       setConversationId(data.conversationId);
+      try { sessionStorage.setItem("skyflow.textConversation", data.conversationId); } catch { /* Storage is optional. */ }
       setModel(data.provider === "fake" ? "offline (canned replies)" : data.model);
       setState(data.state);
       setTrace(data.trace ?? []);
@@ -85,11 +89,33 @@ export default function SimulatorPage() {
     } finally {
       setBusy(false);
     }
-  }
+  }, []);
+
+  const restoreConversation = useCallback(async () => {
+    try {
+      const id = sessionStorage.getItem("skyflow.textConversation");
+      if (id) {
+        const data = await (await fetch(`/api/conversations/${encodeURIComponent(id)}`, { cache: "no-store" })).json();
+        if (data.ok) {
+          setConversationId(id); setState(data.state); setHoldActive(data.holdActive); setAuditEvents(data.auditEvents ?? []);
+          setModel(data.provider === "fake" ? "offline (canned replies)" : data.model);
+          setMessages(data.messages.map((entry: { role: string; content: string }) => ({ role: entry.role === "USER" ? "user" : "assistant", content: entry.content })));
+          return;
+        }
+      }
+    } catch { /* A missing or unavailable saved conversation can start fresh. */ }
+    await startConversation();
+  }, [startConversation]);
+
+  useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+    void restoreConversation();
+  }, [restoreConversation]);
 
   async function send() {
     const text = input.trim();
-    if (!text || !conversationId || busy) return;
+    if (!text || !conversationId || busy || human) return;
 
     setInput("");
     setMessages((current) => [...current, { role: "user", content: text }]);
@@ -110,7 +136,7 @@ export default function SimulatorPage() {
         return;
       }
 
-      setMessages((current) => [...current, { role: "assistant", content: data.message }]);
+      if (data.message) setMessages((current) => [...current, { role: "assistant", content: data.message }]);
       setTrace((current) => [...current, ...data.trace]);
       setState(data.state ?? "—");
       setHoldActive(data.holdActive);
@@ -153,6 +179,7 @@ export default function SimulatorPage() {
       const data = await response.json();
       if (!data.ok) throw new Error(data.error ?? "Could not run the scenario.");
       setConversationId(data.conversationId);
+      try { sessionStorage.setItem("skyflow.textConversation", data.conversationId); } catch { /* Storage is optional. */ }
       setModel(data.model);
       setMessages(data.messages);
       setTrace(data.trace);
@@ -176,6 +203,7 @@ export default function SimulatorPage() {
             <h1 className="text-xl font-semibold">Text simulator</h1>
             <Link href="/" className="text-sm text-sky-400 hover:underline">Disruption board</Link>
             <Link href="/voice" className="ml-4 text-sm text-sky-400 hover:underline">Voice rebooking</Link>
+            <Link href="/employee" className="ml-4 text-sm text-sky-400 hover:underline">Employee workspace</Link>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-sm">
             <span className="text-slate-400">
@@ -183,12 +211,12 @@ export default function SimulatorPage() {
             </span>
             <span
               className={`rounded px-2 py-1 text-xs font-medium ${
-                STATE_COLOURS[state] ?? "bg-slate-700 text-slate-200"
+                STATE_COLOURS[displayedState] ?? "bg-slate-700 text-slate-200"
               }`}
             >
-              {state}
+              {displayedState}
             </span>
-            {holdActive && (
+            {displayedHold && (
               <span className="rounded bg-amber-500/20 px-2 py-1 text-xs text-amber-300">
                 seat held
               </span>
@@ -249,6 +277,7 @@ export default function SimulatorPage() {
       <div className="grid gap-0 lg:grid-cols-2">
         {/* Conversation */}
         <section className="flex min-h-[70vh] min-w-0 flex-col border-slate-800 lg:border-r">
+          {human && conversationId && monitored ? <PassengerThread key={conversationId} conversationId={conversationId} data={monitored} /> : <>
           <div ref={conversationRef} className="max-h-[65vh] flex-1 space-y-3 overflow-y-auto p-6">
             {messages.map((message, index) => (
               <div
@@ -297,6 +326,7 @@ export default function SimulatorPage() {
               </button>
             </div>
           </div>
+          </>}
         </section>
 
         {/* Inspector */}

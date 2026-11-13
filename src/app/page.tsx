@@ -44,6 +44,7 @@ export default async function Home() {
           <Link href="/voice" className="ml-3 mt-4 inline-block rounded border border-slate-600 px-4 py-2 text-sm font-medium text-sky-200 hover:bg-slate-800">
             Try voice rebooking
           </Link>
+          <Link href="/employee" className="ml-3 mt-4 inline-block rounded border border-slate-600 px-4 py-2 text-sm font-medium text-emerald-200 hover:bg-slate-800">Employee workspace</Link>
           <p className="mt-2 text-sm text-slate-400">
             Live from your database. The green flights are the only ones the voice agent will ever be
             allowed to offer.

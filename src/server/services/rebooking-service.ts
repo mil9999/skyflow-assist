@@ -1,3 +1,4 @@
+import { assertSessionActor, type ServiceActor } from "./session-control";
 import { createHash } from "node:crypto";
 
 import { AuditAction, HOLD_DURATION_MINUTES } from "../../domain/constants";
@@ -45,12 +46,13 @@ export interface HoldResult {
  * Availability is re-checked here because the search happened seconds ago and
  * another passenger may have taken the last seat since.
  */
-export async function holdAlternativeFlight(input: HoldInput): Promise<HoldResult> {
+export async function holdAlternativeFlight(input: HoldInput, actor: ServiceActor = "AI"): Promise<HoldResult> {
   return prisma.$transaction(async (tx) => {
     const session = await sessionRepository.findById(tx, input.sessionId);
     if (!session) {
       throw new DomainError(ErrorCode.INVALID_STATE, "Unknown session.");
     }
+    assertSessionActor(session, actor);
     if (session.state !== "OPTIONS_PRESENTED") {
       throw new DomainError(
         ErrorCode.INVALID_STATE,
@@ -98,11 +100,11 @@ export async function holdAlternativeFlight(input: HoldInput): Promise<HoldResul
     });
 
     assertTransitionAllowed(session.state, "OPTION_HELD");
-    await sessionRepository.transition(tx, session.id, "OPTION_HELD", { activeHoldId: hold.id });
+    await sessionRepository.transition(tx, session.id, "OPTION_HELD", { activeHoldId: hold.id }, actor);
 
     // The passenger must now say yes out loud before anything is committed.
     assertTransitionAllowed("OPTION_HELD", "AWAITING_CONFIRMATION");
-    await sessionRepository.transition(tx, session.id, "AWAITING_CONFIRMATION");
+    await sessionRepository.transition(tx, session.id, "AWAITING_CONFIRMATION", {}, actor);
 
     await auditService.record(tx, session.id, AuditAction.FLIGHT_HELD, {
       holdId: hold.id,
@@ -141,7 +143,9 @@ export interface ConfirmResult {
   };
 }
 
-export async function confirmRebooking(input: ConfirmInput): Promise<ConfirmResult> {
+export async function confirmRebooking(input: ConfirmInput, actor: ServiceActor = "AI"): Promise<ConfirmResult> {
+  const controlled = await sessionRepository.findById(prisma, input.sessionId);
+  if (controlled) assertSessionActor(controlled, actor);
   const requestHash = hashRequest({
     sessionId: input.sessionId,
     holdId: input.holdId,
@@ -172,6 +176,7 @@ export async function confirmRebooking(input: ConfirmInput): Promise<ConfirmResu
     if (!session) {
       throw new DomainError(ErrorCode.INVALID_STATE, "Unknown session.");
     }
+    assertSessionActor(session, actor);
     if (!session.bookingId) {
       throw new DomainError(ErrorCode.BOOKING_NOT_FOUND, "No booking attached to this session.");
     }
@@ -221,7 +226,7 @@ export async function confirmRebooking(input: ConfirmInput): Promise<ConfirmResu
     await holdRepository.confirm(tx, hold.id);
 
     assertTransitionAllowed(session.state, "REBOOKED");
-    await sessionRepository.transition(tx, session.id, "REBOOKED", { activeHoldId: null });
+    await sessionRepository.transition(tx, session.id, "REBOOKED", { activeHoldId: null }, actor);
 
     const result: ConfirmResult = {
       success: true,
@@ -273,11 +278,12 @@ interface RewindableSession {
  * The one place a held seat goes back into inventory. Cancellation and expiry
  * both route through here so the two paths cannot drift apart.
  */
-async function releaseAndRewind(
+export async function releaseAndRewind(
   tx: DatabaseClient,
   hold: ReleasableHold,
   session: RewindableSession | null,
   status: ReleaseStatus,
+  actor: ServiceActor = "SYSTEM",
 ): Promise<void> {
   await holdRepository.setStatus(tx, hold.id, status);
   await flightRepository.releaseSeat(tx, hold.newFlightId);
@@ -287,7 +293,7 @@ async function releaseAndRewind(
       assertTransitionAllowed(session.state, "OPTIONS_PRESENTED");
       await sessionRepository.transition(tx, session.id, "OPTIONS_PRESENTED", {
         activeHoldId: null,
-      });
+      }, actor);
     }
 
     await auditService.record(
@@ -308,7 +314,7 @@ export interface CancelHoldResult {
   holdId: string;
   status: ReleaseStatus;
   seatReleased: boolean;
-  state: "OPTIONS_PRESENTED";
+  state: string;
 }
 
 /**
@@ -317,12 +323,13 @@ export interface CancelHoldResult {
  * Distinct from confirmRebooking({ confirmed: false }), which stays strictly a
  * refusal to act rather than a way to decline a flight.
  */
-export async function cancelHold(input: CancelHoldInput): Promise<CancelHoldResult> {
+export async function cancelHold(input: CancelHoldInput, actor: ServiceActor = "AI"): Promise<CancelHoldResult> {
   return prisma.$transaction(async (tx) => {
     const session = await sessionRepository.findById(tx, input.sessionId);
     if (!session) {
       throw new DomainError(ErrorCode.INVALID_STATE, "Unknown session.");
     }
+    assertSessionActor(session, actor);
 
     const hold = await holdRepository.findById(tx, input.holdId);
     if (!hold) {
@@ -337,17 +344,17 @@ export async function cancelHold(input: CancelHoldInput): Promise<CancelHoldResu
 
     // Already released. Return the same shape without touching inventory again.
     if (hold.status !== "ACTIVE") {
-      if (session.state === "OPTION_HELD" || session.state === "AWAITING_CONFIRMATION") {
+      if (session.activeHoldId === hold.id && (session.state === "OPTION_HELD" || session.state === "AWAITING_CONFIRMATION")) {
         assertTransitionAllowed(session.state, "OPTIONS_PRESENTED");
         await sessionRepository.transition(tx, session.id, "OPTIONS_PRESENTED", {
           activeHoldId: null,
-        });
+        }, actor);
       }
       return {
         holdId: hold.id,
         status: hold.status as ReleaseStatus,
         seatReleased: false,
-        state: "OPTIONS_PRESENTED" as const,
+        state: session.activeHoldId === hold.id ? "OPTIONS_PRESENTED" : session.state,
       };
     }
 
@@ -356,7 +363,7 @@ export async function cancelHold(input: CancelHoldInput): Promise<CancelHoldResu
     }
 
     const status: ReleaseStatus = hold.expiresAt.getTime() <= Date.now() ? "EXPIRED" : "CANCELLED";
-    await releaseAndRewind(tx, hold, session, status);
+    await releaseAndRewind(tx, hold, session, status, actor);
 
     return {
       holdId: hold.id,

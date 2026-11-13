@@ -21,6 +21,6 @@ export async function POST(request: Request): Promise<Response> {
   }));
   if (!created.ok) return privateResponse({ ok: false, error: "Could not open the airline session." }, 503);
   const body = await created.json();
-  const conversationId = createVoiceSession(body.data.sessionId);
+  const conversationId = await createVoiceSession(body.data.sessionId);
   return privateResponse({ ok: true, conversationId, signedUrl, state: body.data.state });
 }

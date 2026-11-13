@@ -1,6 +1,6 @@
 # SkyFlow Assist development checkpoint
 
-Updated: 5 November 2026. Repository: `mil9999/skyflow-assist` (public). Current work branch: `codex/complete-disruption-demo`.
+Updated: 13 November 2026 (Europe/Paris overnight window). Repository: `mil9999/skyflow-assist` (public). Current work branch: `codex/complete-disruption-demo`.
 
 ## Completed in the current milestone
 
@@ -28,12 +28,26 @@ Updated: 5 November 2026. Repository: `mil9999/skyflow-assist` (public). Current
 - Production verification: `npm run build -- --webpack` passes, including TypeScript and all 21 generated pages. The default Turbopack build remains blocked by the local environment denying the CSS worker's internal port, including on the requested escalation; no successful default build is claimed for this milestone.
 - Duplicate generated `.next/types` files had caused TypeScript collisions. Moved only those duplicate cache files to a temporary backup; source TypeScript checks were not weakened.
 
-## Next work
+## Employee takeover and persisted voice milestone (13 November)
 
-1. Add an employee monitoring/takeover interface backed by persisted text history and backend session/audit records. Ensure takeover blocks further AI booking actions; extend persistence to voice context/transcripts separately.
-2. Add repeatable live-model evaluation across the passenger journeys; individual successful live runs do not establish reliability.
-3. Validate microphone speech recognition, audio, interruptions, and live expired-hold recovery. The live agent's rebooking tools have been exercised through text mode. See `voice-setup.md`; do not print credentials or commit `.env`.
-4. Prepare hosted storage, session handling, a scheduled expiry worker, and access controls before deployment.
+- Implemented `/employee`: saved conversation queue, shared transcript, support cases, audit history, identity checks, flight search, seat holds, release, and confirmed rebooking. Passenger and staff exchange text without invoking an AI model. Employee assistance during a voice handover continues by text; no employee voice call is claimed.
+- Takeover persists employee ownership and blocks subsequent AI booking tools, including authenticated webhook calls and cached voice calls. An in-flight text reply is suppressed after takeover while preserving the passenger's message. Existing holds remain available to staff and still expire. Escalated cases reopen an audited review stage without bypassing identity verification.
+- Added SQLite voice context, closed/busy state, version guards, and completed tool-call responses. Separate Node processes restore options and a hold, confirm once, and replay completed responses without another booking change. Interrupted operations fail closed; automatic mid-operation recovery and remote ElevenLabs connection resumption after page reload are not implemented.
+- Added a shared stored transcript with message retry deduplication, speaker validation, passenger-safe views, and backfill from older text checkpoints on takeover. The simulator restores its conversation ID from tab session storage after reload. Voice transcript delivery on page leave remains best effort.
+- Added development-only hold recovery at startup and every 30 seconds. The worker covers employee-owned holds and runs only while the development server is alive. Production scheduling remains pending; `holds:expire` remains available manually.
+- Final review bound employee approval to the exact hold. A replacement created in another window cannot reuse earlier consent. A delayed cancellation retry cannot rewind or erase a newer hold. Direct webhook escalation releases a seat atomically.
+- New employee, transcript, and voice routes require a loopback development host and reject foreign origins. They remain disabled in production until login and hosted access controls exist.
+- Validation: **165 tests in 14 files pass**, including the added ownership, persistence, stale approval, cancellation retry, and old-history regressions. Lint and `tsc --noEmit` pass. `npm run build -- --webpack` passes with all 24 generated pages. The previously documented Turbopack environment restriction remains; no new default-build success is claimed. Existing Vite configuration and Prisma configuration deprecation notices remain non-failing.
+- Browser acceptance on an isolated fictional database (13 November): employee takeover, identity verification, booking load, eligible alternatives, held-flight read-back, passenger explicit yes, confirmation enabled only after staff acknowledgment, one SF218 rebooking to seat 26E, bidirectional final message, and simulator reload recovery all passed. The development database was not reset. Evidence is saved outside Git at `/private/tmp/skyflow-employee-milestone.jpg`.
+- Earlier live ElevenLabs text-mode acceptance (9 November): no alternatives created a support case visible in the employee queue; takeover disconnected the AI transport and delivered an employee text reply. The live model still offered an unrelated follow-up after escalation. On 13 November, terminal-stop, expired-hold consent, and text-handover instructions were synchronized to the dedicated agent and all seven tools verified. Behavior after that prompt update still needs a fresh live run.
+- Applied the additive local migration after an SQLite backup. Counts of every pre-existing application table were unchanged (5 passengers, 10 flights, 5 bookings, 2 disruptions, 1 session, 1 audit event; existing holds/cases/idempotency/text checkpoints empty). The backup is outside Git. Existing local flight dates were preserved; use the simulator's explicit reset or scripted scenario buttons to refresh fictional dates when desired.
+- Updated README, voice setup, and the employee walkthrough to reflect actual behavior and remaining limits. No credentials, local databases, screenshots, or account setup checkpoints belong in the public repository.
+
+## Next concrete work
+
+1. Add repeatable live-model evaluation for rebooking, ambiguous confirmation, failed verification, no alternatives, expired holds, and employee takeover. Keep offline fixtures separate from opt-in billable ElevenLabs runs. Individual successful live runs do not establish reliability. The current local environment has ElevenLabs credentials but no OpenAI text-model key; do not expose either.
+2. Run a fresh live text-mode check of the updated terminal/expiry instructions. Then validate microphone speech recognition, audio, interruptions, and spoken rebooking once the user grants microphone access for the local voice page. That approval is still pending; no microphone acceptance is claimed.
+3. Prepare employee login, passenger access controls, hosted storage and session handling, a production expiry scheduler, and dependency advisory remediation before any deployment. Real airline APIs, payments, refunds, compensation, and telephony remain outside the current demonstration.
 
 ## Persistent text conversation milestone (5 November)
 
@@ -45,7 +59,7 @@ Updated: 5 November 2026. Repository: `mil9999/skyflow-assist` (public). Current
 - Validation: all 149 tests pass, including recovery and confirmation in a separate Node process, overlapping/stale turn refusal, interrupted-process HTTP conflicts, external expiry, handled configuration errors, and reset deletion. Lint and TypeScript pass; `npm run build -- --webpack` passes. The default Turbopack environment restriction described above remains.
 - Applied the additive migration to the local demo with `setup:demo` after taking a temporary database backup. All pre-existing application table row counts were unchanged; fictional bookings were not reset. Restart the development server to load the regenerated Prisma client.
 
-Text context now survives completed-turn server restarts. Voice context remains in memory and the voice transcript in the browser. Support cases are records, not a live contact-centre connection. Overdue holds can be recovered from the database with `holds:expire`, but scheduling expiry, restoring voice conversations, employee takeover, and application authentication are required before hosted voice is enabled.
+The 5 November limitations above are historical. The 13 November milestone adds persisted voice tools, shared transcripts, local employee takeover, page reload recovery for text, and a development expiry worker. Authentication, hosted scheduling, and remote voice connection resumption remain pending.
 
 Work is tracked in draft [PR #1](https://github.com/mil9999/skyflow-assist/pull/1). Keep it reviewable and update its description when scope changes.
 

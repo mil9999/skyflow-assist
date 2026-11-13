@@ -128,6 +128,21 @@ describe("declining a held flight", () => {
     });
     expect(confirmed.newFlight.flightNumber).toBe("SF224");
   });
+
+  it("keeps a newer hold intact when an old cancellation is retried", async () => {
+    const { sessionId, holdId } = await heldSession();
+    await cancelHold({ sessionId, holdId });
+    const replacement = await holdAlternativeFlight({ sessionId, flightId: fx.flights.SF224.id });
+
+    expect(await cancelHold({ sessionId, holdId })).toMatchObject({ seatReleased: false, state: "AWAITING_CONFIRMATION" });
+    expect(await prisma.conversationSession.findUniqueOrThrow({ where: { id: sessionId } })).toMatchObject({ state: "AWAITING_CONFIRMATION", activeHoldId: replacement.holdId });
+    expect(await seatsOn("SF218")).toBe(17);
+    expect(await seatsOn("SF224")).toBe(3);
+
+    await confirmRebooking({ sessionId, holdId: replacement.holdId, confirmed: true, idempotencyKey: "replacement-after-retry" });
+    expect(await cancelHold({ sessionId, holdId })).toMatchObject({ seatReleased: false, state: "REBOOKED" });
+    expect(await seatsOn("SF224")).toBe(3);
+  });
 });
 
 describe("refusals", () => {

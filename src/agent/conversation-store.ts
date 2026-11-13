@@ -3,9 +3,11 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
 import { prisma } from "@/server/db/prisma";
+import { appendTextHistory } from "@/server/services/conversation-log";
+import { assertSessionActor } from "@/server/services/session-control";
 import type { SimulatorConversation } from "./types";
 
-const snapshotSchema = z.object({
+export const snapshotSchema = z.object({
   input: z.array(z.record(z.string(), z.unknown())),
   messages: z.array(z.object({
     role: z.enum(["user", "assistant"]), content: z.string(), at: z.string(),
@@ -20,7 +22,7 @@ const snapshotSchema = z.object({
   confirmationIdempotencyKey: z.string().optional(),
 });
 
-function snapshot(conversation: SimulatorConversation): string {
+export function snapshot(conversation: SimulatorConversation): string {
   return JSON.stringify(snapshotSchema.parse(conversation));
 }
 
@@ -70,23 +72,35 @@ export async function getConversation(conversationId: string): Promise<Simulator
 
 /** Acquire before the first model/tool call, including across Node processes. */
 export async function beginConversationTurn(conversation: SimulatorConversation): Promise<void> {
+  const session = await prisma.conversationSession.findUniqueOrThrow({ where: { id: conversation.sessionId } });
+  assertSessionActor(session);
   const acquired = await prisma.textConversation.updateMany({
-    where: { id: conversation.conversationId, version: conversation.checkpointVersion ?? 0, busy: false },
+    where: { id: conversation.conversationId, version: conversation.checkpointVersion ?? 0, busy: false, session: { controller: "AI" } },
     data: { busy: true },
   });
   if (acquired.count !== 1) throw new ConversationConflictError();
-  const session = await prisma.conversationSession.findUniqueOrThrow({ where: { id: conversation.sessionId } });
   const activeHoldId = heldId(session);
   if (activeHoldId !== conversation.activeHoldId) conversation.confirmationIdempotencyKey = undefined;
   conversation.activeHoldId = activeHoldId;
 }
 
 /** Only completed turns unlock. A process crash fails closed instead of replaying tools. */
-export async function completeConversationTurn(conversation: SimulatorConversation): Promise<void> {
-  const saved = await prisma.textConversation.updateMany({
-    where: { id: conversation.conversationId, version: conversation.checkpointVersion ?? 0, busy: true },
-    data: { snapshot: snapshot(conversation), version: { increment: 1 }, busy: false },
+export async function completeConversationTurn(conversation: SimulatorConversation): Promise<boolean> {
+  const takenOver = await prisma.$transaction(async (tx) => {
+    const session = await tx.conversationSession.findUniqueOrThrow({ where: { id: conversation.sessionId } });
+    if (session.controller === "EMPLOYEE") {
+      const previous = await tx.textConversation.findUniqueOrThrow({ where: { id: conversation.conversationId } });
+      const history = snapshotSchema.parse(JSON.parse(previous.snapshot)).messages;
+      conversation.messages = [...history, ...conversation.messages.slice(history.length).filter((message) => message.role === "user")];
+    }
+    const saved = await tx.textConversation.updateMany({
+      where: { id: conversation.conversationId, version: conversation.checkpointVersion ?? 0, busy: true },
+      data: { snapshot: snapshot(conversation), version: { increment: 1 }, busy: false },
+    });
+    if (saved.count !== 1) throw new ConversationConflictError();
+    await appendTextHistory(tx, conversation.sessionId, conversation.messages);
+    return session.controller === "EMPLOYEE";
   });
-  if (saved.count !== 1) throw new ConversationConflictError();
   conversation.checkpointVersion = (conversation.checkpointVersion ?? 0) + 1;
+  return takenOver;
 }
