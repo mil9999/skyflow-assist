@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
-import { clearConversations, createConversation } from "../src/agent/conversation-store";
+import { createConversation } from "../src/agent/conversation-store";
 import { runTurn } from "../src/agent/conversation-runner";
 import type { SimulatorConversation, TraceStep } from "../src/agent/types";
 import { prisma } from "../src/server/db/prisma";
@@ -16,7 +16,6 @@ import { resetDatabase, seedScenario } from "./helpers/fixtures";
  */
 
 beforeEach(async () => {
-  clearConversations();
   await resetDatabase();
   await seedScenario();
 });
@@ -288,7 +287,7 @@ describe("scenario: choosing a flight", () => {
 describe("scenario: handing over", () => {
   it("escalates when nothing is available", async () => {
     const { sessionId } = await createSession("TEXT");
-    const conversation = createConversation(sessionId);
+    const conversation = await createConversation(sessionId);
 
     const result = await turn(conversation, "SKY55T, Okafor — my flight to Barcelona is cancelled", [
       verifyCall("verify_passenger_identity", { bookingReference: "SKY55T", lastName: "Okafor" }),

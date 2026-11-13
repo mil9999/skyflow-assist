@@ -30,13 +30,14 @@ export async function POST(): Promise<Response> {
     );
   }
 
-  const conversation = createConversation(body.data.sessionId);
+  const conversation = await createConversation(body.data.sessionId);
 
   return Response.json({
     ok: true,
     conversationId: conversation.conversationId,
     state: body.data.state,
     model: agentModel(),
+    provider: process.env.TEXT_AGENT_PROVIDER === "fake" ? "fake" : "openai",
     trace: [
       {
         type: "TOOL",

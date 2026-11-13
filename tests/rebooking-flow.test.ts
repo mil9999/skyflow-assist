@@ -230,6 +230,9 @@ describe("holding", () => {
     const { sessionId, hold } = await sessionAwaitingConfirmation();
     expect(await seatsOn("SF218")).toBe(16);
 
+    await prisma.rebookingHold.update({
+      where: { id: hold.holdId }, data: { expiresAt: new Date(Date.now() - 1_000) },
+    });
     const expired = await expireHold({ holdId: hold.holdId });
     expect(expired.seatReleased).toBe(true);
     expect(await seatsOn("SF218")).toBe(17);

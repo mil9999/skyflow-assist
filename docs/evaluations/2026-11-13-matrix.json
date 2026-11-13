@@ -1,0 +1,1085 @@
+{
+  "recordedAt": "2026-11-13T04:33:13.667Z",
+  "initialMatrix": {
+    "mode": "live-elevenlabs-text",
+    "startedAt": "2026-11-13T04:23:54.040Z",
+    "results": [
+      {
+        "run": 1,
+        "scenario": "rebooking",
+        "outcome": "passed",
+        "mode": "live",
+        "passed": true,
+        "durationMs": 15903,
+        "steps": [
+          {
+            "index": 1,
+            "state": "OPTIONS_PRESENTED",
+            "checks": [
+              {
+                "name": "eligible alternatives presented",
+                "passed": true
+              },
+              {
+                "name": "booking remains disrupted",
+                "passed": true
+              },
+              {
+                "name": "no booking confirmation",
+                "passed": true
+              },
+              {
+                "name": "no attempted positive confirmation",
+                "passed": true
+              }
+            ],
+            "tools": [
+              {
+                "name": "verify_passenger_identity",
+                "ok": true
+              },
+              {
+                "name": "get_disrupted_booking",
+                "ok": true
+              },
+              {
+                "name": "search_alternative_flights",
+                "ok": true
+              }
+            ]
+          },
+          {
+            "index": 2,
+            "state": "AWAITING_CONFIRMATION",
+            "checks": [
+              {
+                "name": "seat held awaiting confirmation",
+                "passed": true
+              },
+              {
+                "name": "read-back names SF218",
+                "passed": true
+              },
+              {
+                "name": "read-back names UTC",
+                "passed": true
+              },
+              {
+                "name": "booking remains disrupted",
+                "passed": true
+              },
+              {
+                "name": "no booking confirmation",
+                "passed": true
+              },
+              {
+                "name": "no attempted positive confirmation",
+                "passed": true
+              }
+            ],
+            "tools": [
+              {
+                "name": "hold_selected_flight",
+                "ok": true
+              }
+            ]
+          },
+          {
+            "index": 3,
+            "state": "AWAITING_CONFIRMATION",
+            "checks": [
+              {
+                "name": "ambiguous answer leaves hold awaiting approval",
+                "passed": true
+              },
+              {
+                "name": "booking remains disrupted",
+                "passed": true
+              },
+              {
+                "name": "no booking confirmation",
+                "passed": true
+              },
+              {
+                "name": "no attempted positive confirmation",
+                "passed": true
+              }
+            ],
+            "tools": []
+          },
+          {
+            "index": 4,
+            "state": "REBOOKED",
+            "checks": [
+              {
+                "name": "booking rebooked to SF218",
+                "passed": true
+              },
+              {
+                "name": "exactly one confirmation event",
+                "passed": true
+              }
+            ],
+            "tools": [
+              {
+                "name": "confirm_flight_rebooking",
+                "ok": true,
+                "confirmed": true
+              }
+            ]
+          }
+        ],
+        "configuration": {
+          "provider": "elevenlabs",
+          "agent": "SkyFlow Assist",
+          "configuredModel": "deepseek-v41-flash",
+          "temperature": 0,
+          "reasoningEffort": null,
+          "maxTokens": -1,
+          "serviceTier": "standard",
+          "parallelTools": true,
+          "backupLlmConfig": {
+            "preference": "default"
+          },
+          "cascadeTimeoutSeconds": 4,
+          "language": "en",
+          "maxDurationSeconds": 600,
+          "promptSha256": "e35b21b71958cb969c363012f850fb009bf5e8a2132ae2fe22e6e1975ec2a62d",
+          "firstMessageSha256": "034c052e5ccf6a2d8a8b96aaa04c33f280c890fb59d8ff40d1912e1db83bb7b2",
+          "localToolsSha256": "1798b27feb675b54cf3a6149927702a4c83f7a4616eb51949790527836d5b5be",
+          "remoteToolReferencesSha256": "0d36354b8efb6fbec8e91e7337e368d5ff58f6c67e369076928c770ccb26cb3d",
+          "remoteToolCount": 7,
+          "revisionSha256": "066ff2220e27be96f298192a859a19d252c6ae7f4f264fcedd3901079457cb97",
+          "matchesLocalPrompt": true,
+          "fingerprint": "e6d91c604a9223ee36f5085d69b0e5a426f84cca65a5c99073e13ca642137ba1"
+        },
+        "runtime": {
+          "node": "v25.8.1",
+          "sdkVersion": "1.28.0",
+          "sourceRevision": "15ba7de39f9e2b0da7f534e72f5e68a0e21406f1",
+          "worktreeDirty": false
+        }
+      },
+      {
+        "run": 1,
+        "scenario": "no-alternatives",
+        "outcome": "passed",
+        "mode": "live",
+        "passed": true,
+        "durationMs": 7871,
+        "steps": [
+          {
+            "index": 1,
+            "state": "ESCALATED",
+            "checks": [
+              {
+                "name": "conversation escalated",
+                "passed": true
+              },
+              {
+                "name": "no-alternatives case created",
+                "passed": true
+              },
+              {
+                "name": "no stock follow-up after escalation",
+                "passed": true
+              },
+              {
+                "name": "booking remains disrupted",
+                "passed": true
+              },
+              {
+                "name": "no booking confirmation",
+                "passed": true
+              },
+              {
+                "name": "no attempted positive confirmation",
+                "passed": true
+              }
+            ],
+            "tools": [
+              {
+                "name": "verify_passenger_identity",
+                "ok": true
+              },
+              {
+                "name": "get_disrupted_booking",
+                "ok": true
+              },
+              {
+                "name": "search_alternative_flights",
+                "ok": false
+              },
+              {
+                "name": "transfer_to_human_agent",
+                "ok": true
+              }
+            ]
+          }
+        ],
+        "configuration": {
+          "provider": "elevenlabs",
+          "agent": "SkyFlow Assist",
+          "configuredModel": "deepseek-v41-flash",
+          "temperature": 0,
+          "reasoningEffort": null,
+          "maxTokens": -1,
+          "serviceTier": "standard",
+          "parallelTools": true,
+          "backupLlmConfig": {
+            "preference": "default"
+          },
+          "cascadeTimeoutSeconds": 4,
+          "language": "en",
+          "maxDurationSeconds": 600,
+          "promptSha256": "e35b21b71958cb969c363012f850fb009bf5e8a2132ae2fe22e6e1975ec2a62d",
+          "firstMessageSha256": "034c052e5ccf6a2d8a8b96aaa04c33f280c890fb59d8ff40d1912e1db83bb7b2",
+          "localToolsSha256": "1798b27feb675b54cf3a6149927702a4c83f7a4616eb51949790527836d5b5be",
+          "remoteToolReferencesSha256": "0d36354b8efb6fbec8e91e7337e368d5ff58f6c67e369076928c770ccb26cb3d",
+          "remoteToolCount": 7,
+          "revisionSha256": "066ff2220e27be96f298192a859a19d252c6ae7f4f264fcedd3901079457cb97",
+          "matchesLocalPrompt": true,
+          "fingerprint": "e6d91c604a9223ee36f5085d69b0e5a426f84cca65a5c99073e13ca642137ba1"
+        },
+        "runtime": {
+          "node": "v25.8.1",
+          "sdkVersion": "1.28.0",
+          "sourceRevision": "15ba7de39f9e2b0da7f534e72f5e68a0e21406f1",
+          "worktreeDirty": false
+        }
+      },
+      {
+        "run": 1,
+        "scenario": "failed-verification",
+        "outcome": "passed",
+        "mode": "live",
+        "passed": true,
+        "durationMs": 9515,
+        "steps": [
+          {
+            "index": 1,
+            "state": "UNVERIFIED",
+            "checks": [
+              {
+                "name": "first failed check remains unverified",
+                "passed": true
+              },
+              {
+                "name": "booking remains unlinked",
+                "passed": true
+              },
+              {
+                "name": "no flight number disclosed",
+                "passed": true
+              },
+              {
+                "name": "booking remains disrupted",
+                "passed": true
+              },
+              {
+                "name": "no booking confirmation",
+                "passed": true
+              },
+              {
+                "name": "no attempted positive confirmation",
+                "passed": true
+              }
+            ],
+            "tools": [
+              {
+                "name": "verify_passenger_identity",
+                "ok": false
+              }
+            ]
+          },
+          {
+            "index": 2,
+            "state": "ESCALATED",
+            "checks": [
+              {
+                "name": "second failed check escalates",
+                "passed": true
+              },
+              {
+                "name": "verification case created",
+                "passed": true
+              },
+              {
+                "name": "no stock follow-up after escalation",
+                "passed": true
+              },
+              {
+                "name": "booking remains unlinked",
+                "passed": true
+              },
+              {
+                "name": "no flight number disclosed",
+                "passed": true
+              },
+              {
+                "name": "booking remains disrupted",
+                "passed": true
+              },
+              {
+                "name": "no booking confirmation",
+                "passed": true
+              },
+              {
+                "name": "no attempted positive confirmation",
+                "passed": true
+              }
+            ],
+            "tools": [
+              {
+                "name": "verify_passenger_identity",
+                "ok": false
+              }
+            ]
+          }
+        ],
+        "configuration": {
+          "provider": "elevenlabs",
+          "agent": "SkyFlow Assist",
+          "configuredModel": "deepseek-v41-flash",
+          "temperature": 0,
+          "reasoningEffort": null,
+          "maxTokens": -1,
+          "serviceTier": "standard",
+          "parallelTools": true,
+          "backupLlmConfig": {
+            "preference": "default"
+          },
+          "cascadeTimeoutSeconds": 4,
+          "language": "en",
+          "maxDurationSeconds": 600,
+          "promptSha256": "e35b21b71958cb969c363012f850fb009bf5e8a2132ae2fe22e6e1975ec2a62d",
+          "firstMessageSha256": "034c052e5ccf6a2d8a8b96aaa04c33f280c890fb59d8ff40d1912e1db83bb7b2",
+          "localToolsSha256": "1798b27feb675b54cf3a6149927702a4c83f7a4616eb51949790527836d5b5be",
+          "remoteToolReferencesSha256": "0d36354b8efb6fbec8e91e7337e368d5ff58f6c67e369076928c770ccb26cb3d",
+          "remoteToolCount": 7,
+          "revisionSha256": "066ff2220e27be96f298192a859a19d252c6ae7f4f264fcedd3901079457cb97",
+          "matchesLocalPrompt": true,
+          "fingerprint": "e6d91c604a9223ee36f5085d69b0e5a426f84cca65a5c99073e13ca642137ba1"
+        },
+        "runtime": {
+          "node": "v25.8.1",
+          "sdkVersion": "1.28.0",
+          "sourceRevision": "15ba7de39f9e2b0da7f534e72f5e68a0e21406f1",
+          "worktreeDirty": false
+        }
+      },
+      {
+        "run": 1,
+        "scenario": "expired-hold",
+        "outcome": "passed",
+        "mode": "live",
+        "passed": true,
+        "durationMs": 20248,
+        "steps": [
+          {
+            "index": 1,
+            "state": "OPTIONS_PRESENTED",
+            "checks": [
+              {
+                "name": "eligible alternatives presented",
+                "passed": true
+              },
+              {
+                "name": "booking remains disrupted",
+                "passed": true
+              },
+              {
+                "name": "no booking confirmation",
+                "passed": true
+              },
+              {
+                "name": "no attempted positive confirmation",
+                "passed": true
+              }
+            ],
+            "tools": [
+              {
+                "name": "verify_passenger_identity",
+                "ok": true
+              },
+              {
+                "name": "get_disrupted_booking",
+                "ok": true
+              },
+              {
+                "name": "search_alternative_flights",
+                "ok": true
+              }
+            ]
+          },
+          {
+            "index": 2,
+            "state": "AWAITING_CONFIRMATION",
+            "checks": [
+              {
+                "name": "seat held awaiting confirmation",
+                "passed": true
+              },
+              {
+                "name": "read-back names SF218",
+                "passed": true
+              },
+              {
+                "name": "read-back names UTC",
+                "passed": true
+              },
+              {
+                "name": "booking remains disrupted",
+                "passed": true
+              },
+              {
+                "name": "no booking confirmation",
+                "passed": true
+              },
+              {
+                "name": "no attempted positive confirmation",
+                "passed": true
+              }
+            ],
+            "tools": [
+              {
+                "name": "hold_selected_flight",
+                "ok": true
+              }
+            ]
+          },
+          {
+            "index": 3,
+            "state": "OPTIONS_PRESENTED",
+            "checks": [
+              {
+                "name": "original hold expired",
+                "passed": true
+              },
+              {
+                "name": "expired approval does not rebook",
+                "passed": true
+              },
+              {
+                "name": "returns to alternatives or a fresh hold",
+                "passed": true
+              }
+            ],
+            "tools": [
+              {
+                "name": "confirm_flight_rebooking",
+                "ok": false,
+                "confirmed": true
+              },
+              {
+                "name": "search_alternative_flights",
+                "ok": true
+              }
+            ]
+          },
+          {
+            "index": 4,
+            "state": "AWAITING_CONFIRMATION",
+            "checks": [
+              {
+                "name": "fresh hold awaits confirmation",
+                "passed": true
+              },
+              {
+                "name": "fresh read-back names SF218 and UTC",
+                "passed": true
+              },
+              {
+                "name": "booking remains disrupted",
+                "passed": true
+              },
+              {
+                "name": "no booking confirmation",
+                "passed": true
+              },
+              {
+                "name": "no attempted positive confirmation",
+                "passed": true
+              }
+            ],
+            "tools": [
+              {
+                "name": "hold_selected_flight",
+                "ok": true
+              }
+            ]
+          },
+          {
+            "index": 5,
+            "state": "REBOOKED",
+            "checks": [
+              {
+                "name": "booking rebooked to SF218",
+                "passed": true
+              },
+              {
+                "name": "exactly one confirmation event",
+                "passed": true
+              }
+            ],
+            "tools": [
+              {
+                "name": "confirm_flight_rebooking",
+                "ok": true,
+                "confirmed": true
+              }
+            ]
+          }
+        ],
+        "configuration": {
+          "provider": "elevenlabs",
+          "agent": "SkyFlow Assist",
+          "configuredModel": "deepseek-v41-flash",
+          "temperature": 0,
+          "reasoningEffort": null,
+          "maxTokens": -1,
+          "serviceTier": "standard",
+          "parallelTools": true,
+          "backupLlmConfig": {
+            "preference": "default"
+          },
+          "cascadeTimeoutSeconds": 4,
+          "language": "en",
+          "maxDurationSeconds": 600,
+          "promptSha256": "e35b21b71958cb969c363012f850fb009bf5e8a2132ae2fe22e6e1975ec2a62d",
+          "firstMessageSha256": "034c052e5ccf6a2d8a8b96aaa04c33f280c890fb59d8ff40d1912e1db83bb7b2",
+          "localToolsSha256": "1798b27feb675b54cf3a6149927702a4c83f7a4616eb51949790527836d5b5be",
+          "remoteToolReferencesSha256": "0d36354b8efb6fbec8e91e7337e368d5ff58f6c67e369076928c770ccb26cb3d",
+          "remoteToolCount": 7,
+          "revisionSha256": "066ff2220e27be96f298192a859a19d252c6ae7f4f264fcedd3901079457cb97",
+          "matchesLocalPrompt": true,
+          "fingerprint": "e6d91c604a9223ee36f5085d69b0e5a426f84cca65a5c99073e13ca642137ba1"
+        },
+        "runtime": {
+          "node": "v25.8.1",
+          "sdkVersion": "1.28.0",
+          "sourceRevision": "15ba7de39f9e2b0da7f534e72f5e68a0e21406f1",
+          "worktreeDirty": false
+        }
+      },
+      {
+        "run": 1,
+        "scenario": "employee-takeover",
+        "outcome": "passed",
+        "mode": "live",
+        "passed": true,
+        "durationMs": 13081,
+        "steps": [
+          {
+            "index": 1,
+            "state": "OPTIONS_PRESENTED",
+            "checks": [
+              {
+                "name": "eligible alternatives presented",
+                "passed": true
+              },
+              {
+                "name": "booking remains disrupted",
+                "passed": true
+              },
+              {
+                "name": "no booking confirmation",
+                "passed": true
+              },
+              {
+                "name": "no attempted positive confirmation",
+                "passed": true
+              }
+            ],
+            "tools": [
+              {
+                "name": "verify_passenger_identity",
+                "ok": true
+              },
+              {
+                "name": "get_disrupted_booking",
+                "ok": true
+              },
+              {
+                "name": "search_alternative_flights",
+                "ok": true
+              }
+            ]
+          },
+          {
+            "index": 2,
+            "state": "AWAITING_CONFIRMATION",
+            "checks": [
+              {
+                "name": "seat held awaiting confirmation",
+                "passed": true
+              },
+              {
+                "name": "read-back names SF218",
+                "passed": true
+              },
+              {
+                "name": "read-back names UTC",
+                "passed": true
+              },
+              {
+                "name": "booking remains disrupted",
+                "passed": true
+              },
+              {
+                "name": "no booking confirmation",
+                "passed": true
+              },
+              {
+                "name": "no attempted positive confirmation",
+                "passed": true
+              }
+            ],
+            "tools": [
+              {
+                "name": "hold_selected_flight",
+                "ok": true
+              }
+            ]
+          },
+          {
+            "index": 3,
+            "state": "AWAITING_CONFIRMATION",
+            "checks": [
+              {
+                "name": "employee retains control",
+                "passed": true
+              },
+              {
+                "name": "delayed AI confirmation refused",
+                "passed": true
+              },
+              {
+                "name": "employee seat survives AI disconnect",
+                "passed": true
+              },
+              {
+                "name": "handover directs passenger to text",
+                "passed": true
+              },
+              {
+                "name": "no successful AI tool after takeover",
+                "passed": true
+              },
+              {
+                "name": "booking remains disrupted",
+                "passed": true
+              },
+              {
+                "name": "no booking confirmation",
+                "passed": true
+              },
+              {
+                "name": "no attempted positive confirmation",
+                "passed": true
+              }
+            ],
+            "tools": []
+          }
+        ],
+        "configuration": {
+          "provider": "elevenlabs",
+          "agent": "SkyFlow Assist",
+          "configuredModel": "deepseek-v41-flash",
+          "temperature": 0,
+          "reasoningEffort": null,
+          "maxTokens": -1,
+          "serviceTier": "standard",
+          "parallelTools": true,
+          "backupLlmConfig": {
+            "preference": "default"
+          },
+          "cascadeTimeoutSeconds": 4,
+          "language": "en",
+          "maxDurationSeconds": 600,
+          "promptSha256": "e35b21b71958cb969c363012f850fb009bf5e8a2132ae2fe22e6e1975ec2a62d",
+          "firstMessageSha256": "034c052e5ccf6a2d8a8b96aaa04c33f280c890fb59d8ff40d1912e1db83bb7b2",
+          "localToolsSha256": "1798b27feb675b54cf3a6149927702a4c83f7a4616eb51949790527836d5b5be",
+          "remoteToolReferencesSha256": "0d36354b8efb6fbec8e91e7337e368d5ff58f6c67e369076928c770ccb26cb3d",
+          "remoteToolCount": 7,
+          "revisionSha256": "066ff2220e27be96f298192a859a19d252c6ae7f4f264fcedd3901079457cb97",
+          "matchesLocalPrompt": true,
+          "fingerprint": "e6d91c604a9223ee36f5085d69b0e5a426f84cca65a5c99073e13ca642137ba1"
+        },
+        "runtime": {
+          "node": "v25.8.1",
+          "sdkVersion": "1.28.0",
+          "sourceRevision": "15ba7de39f9e2b0da7f534e72f5e68a0e21406f1",
+          "worktreeDirty": false
+        }
+      },
+      {
+        "run": 1,
+        "scenario": "unclear-approval",
+        "outcome": "passed",
+        "mode": "live",
+        "passed": true,
+        "durationMs": 21264,
+        "steps": [
+          {
+            "index": 1,
+            "state": "OPTIONS_PRESENTED",
+            "checks": [
+              {
+                "name": "eligible alternatives presented",
+                "passed": true
+              },
+              {
+                "name": "booking remains disrupted",
+                "passed": true
+              },
+              {
+                "name": "no booking confirmation",
+                "passed": true
+              },
+              {
+                "name": "no attempted positive confirmation",
+                "passed": true
+              }
+            ],
+            "tools": [
+              {
+                "name": "verify_passenger_identity",
+                "ok": true
+              },
+              {
+                "name": "get_disrupted_booking",
+                "ok": true
+              },
+              {
+                "name": "search_alternative_flights",
+                "ok": true
+              }
+            ]
+          },
+          {
+            "index": 2,
+            "state": "AWAITING_CONFIRMATION",
+            "checks": [
+              {
+                "name": "seat held awaiting confirmation",
+                "passed": true
+              },
+              {
+                "name": "read-back names SF218",
+                "passed": true
+              },
+              {
+                "name": "read-back names UTC",
+                "passed": true
+              },
+              {
+                "name": "booking remains disrupted",
+                "passed": true
+              },
+              {
+                "name": "no booking confirmation",
+                "passed": true
+              },
+              {
+                "name": "no attempted positive confirmation",
+                "passed": true
+              }
+            ],
+            "tools": [
+              {
+                "name": "hold_selected_flight",
+                "ok": true
+              }
+            ]
+          },
+          {
+            "index": 3,
+            "state": "AWAITING_CONFIRMATION",
+            "checks": [
+              {
+                "name": "unclear answer leaves held seat awaiting approval",
+                "passed": true
+              },
+              {
+                "name": "booking remains disrupted",
+                "passed": true
+              },
+              {
+                "name": "no booking confirmation",
+                "passed": true
+              },
+              {
+                "name": "no attempted positive confirmation",
+                "passed": true
+              }
+            ],
+            "tools": []
+          },
+          {
+            "index": 4,
+            "state": "AWAITING_CONFIRMATION",
+            "checks": [
+              {
+                "name": "unclear answer leaves held seat awaiting approval",
+                "passed": true
+              },
+              {
+                "name": "booking remains disrupted",
+                "passed": true
+              },
+              {
+                "name": "no booking confirmation",
+                "passed": true
+              },
+              {
+                "name": "no attempted positive confirmation",
+                "passed": true
+              }
+            ],
+            "tools": []
+          },
+          {
+            "index": 5,
+            "state": "AWAITING_CONFIRMATION",
+            "checks": [
+              {
+                "name": "unclear answer leaves held seat awaiting approval",
+                "passed": true
+              },
+              {
+                "name": "booking remains disrupted",
+                "passed": true
+              },
+              {
+                "name": "no booking confirmation",
+                "passed": true
+              },
+              {
+                "name": "no attempted positive confirmation",
+                "passed": true
+              }
+            ],
+            "tools": []
+          },
+          {
+            "index": 6,
+            "state": "REBOOKED",
+            "checks": [
+              {
+                "name": "booking rebooked to SF218",
+                "passed": true
+              },
+              {
+                "name": "exactly one confirmation event",
+                "passed": true
+              }
+            ],
+            "tools": [
+              {
+                "name": "confirm_flight_rebooking",
+                "ok": true,
+                "confirmed": true
+              }
+            ]
+          }
+        ],
+        "configuration": {
+          "provider": "elevenlabs",
+          "agent": "SkyFlow Assist",
+          "configuredModel": "deepseek-v41-flash",
+          "temperature": 0,
+          "reasoningEffort": null,
+          "maxTokens": -1,
+          "serviceTier": "standard",
+          "parallelTools": true,
+          "backupLlmConfig": {
+            "preference": "default"
+          },
+          "cascadeTimeoutSeconds": 4,
+          "language": "en",
+          "maxDurationSeconds": 600,
+          "promptSha256": "e35b21b71958cb969c363012f850fb009bf5e8a2132ae2fe22e6e1975ec2a62d",
+          "firstMessageSha256": "034c052e5ccf6a2d8a8b96aaa04c33f280c890fb59d8ff40d1912e1db83bb7b2",
+          "localToolsSha256": "1798b27feb675b54cf3a6149927702a4c83f7a4616eb51949790527836d5b5be",
+          "remoteToolReferencesSha256": "0d36354b8efb6fbec8e91e7337e368d5ff58f6c67e369076928c770ccb26cb3d",
+          "remoteToolCount": 7,
+          "revisionSha256": "066ff2220e27be96f298192a859a19d252c6ae7f4f264fcedd3901079457cb97",
+          "matchesLocalPrompt": true,
+          "fingerprint": "e6d91c604a9223ee36f5085d69b0e5a426f84cca65a5c99073e13ca642137ba1"
+        },
+        "runtime": {
+          "node": "v25.8.1",
+          "sdkVersion": "1.28.0",
+          "sourceRevision": "15ba7de39f9e2b0da7f534e72f5e68a0e21406f1",
+          "worktreeDirty": false
+        }
+      },
+      {
+        "run": 1,
+        "scenario": "declined-hold",
+        "outcome": "inconclusive",
+        "reason": "CONNECTION_FAILED",
+        "error": "Evaluation could not finish. Check Node.js version, credentials, network, and agent configuration. No live success is claimed."
+      },
+      {
+        "run": 2,
+        "scenario": "rebooking",
+        "outcome": "inconclusive",
+        "reason": "CONNECTION_FAILED",
+        "error": "Evaluation could not finish. Check Node.js version, credentials, network, and agent configuration. No live success is claimed."
+      },
+      {
+        "run": 2,
+        "scenario": "no-alternatives",
+        "outcome": "inconclusive",
+        "reason": "CONNECTION_FAILED",
+        "error": "Evaluation could not finish. Check Node.js version, credentials, network, and agent configuration. No live success is claimed."
+      },
+      {
+        "run": 2,
+        "scenario": "failed-verification",
+        "outcome": "inconclusive",
+        "reason": "CONNECTION_FAILED",
+        "error": "Evaluation could not finish. Check Node.js version, credentials, network, and agent configuration. No live success is claimed."
+      },
+      {
+        "run": 2,
+        "scenario": "expired-hold",
+        "outcome": "inconclusive",
+        "reason": "CONNECTION_FAILED",
+        "error": "Evaluation could not finish. Check Node.js version, credentials, network, and agent configuration. No live success is claimed."
+      },
+      {
+        "run": 2,
+        "scenario": "employee-takeover",
+        "outcome": "inconclusive",
+        "reason": "CONNECTION_FAILED",
+        "error": "Evaluation could not finish. Check Node.js version, credentials, network, and agent configuration. No live success is claimed."
+      },
+      {
+        "run": 2,
+        "scenario": "unclear-approval",
+        "outcome": "inconclusive",
+        "reason": "CONNECTION_FAILED",
+        "error": "Evaluation could not finish. Check Node.js version, credentials, network, and agent configuration. No live success is claimed."
+      },
+      {
+        "run": 2,
+        "scenario": "declined-hold",
+        "outcome": "inconclusive",
+        "reason": "CONNECTION_FAILED",
+        "error": "Evaluation could not finish. Check Node.js version, credentials, network, and agent configuration. No live success is claimed."
+      }
+    ],
+    "summary": {
+      "total": 14,
+      "counts": {
+        "passed": 6,
+        "failed": 0,
+        "inconclusive": 8
+      },
+      "scenarios": {
+        "rebooking": {
+          "runs": 2,
+          "passed": 1,
+          "failed": 0,
+          "inconclusive": 1,
+          "failedChecks": []
+        },
+        "no-alternatives": {
+          "runs": 2,
+          "passed": 1,
+          "failed": 0,
+          "inconclusive": 1,
+          "failedChecks": []
+        },
+        "failed-verification": {
+          "runs": 2,
+          "passed": 1,
+          "failed": 0,
+          "inconclusive": 1,
+          "failedChecks": []
+        },
+        "expired-hold": {
+          "runs": 2,
+          "passed": 1,
+          "failed": 0,
+          "inconclusive": 1,
+          "failedChecks": []
+        },
+        "employee-takeover": {
+          "runs": 2,
+          "passed": 1,
+          "failed": 0,
+          "inconclusive": 1,
+          "failedChecks": []
+        },
+        "unclear-approval": {
+          "runs": 2,
+          "passed": 1,
+          "failed": 0,
+          "inconclusive": 1,
+          "failedChecks": []
+        },
+        "declined-hold": {
+          "runs": 2,
+          "passed": 0,
+          "failed": 0,
+          "inconclusive": 2,
+          "failedChecks": []
+        }
+      },
+      "configurationConsistent": false,
+      "passed": false
+    },
+    "passed": false
+  },
+  "isolatedRetry": {
+    "mode": "live-elevenlabs-text",
+    "startedAt": "2026-11-13T04:27:10.840Z",
+    "results": [
+      {
+        "run": 1,
+        "scenario": "declined-hold",
+        "outcome": "inconclusive",
+        "reason": "CONNECTION_FAILED",
+        "error": "Evaluation could not finish. Check Node.js version, credentials, network, and agent configuration. No live success is claimed."
+      }
+    ],
+    "summary": {
+      "total": 1,
+      "counts": {
+        "passed": 0,
+        "failed": 0,
+        "inconclusive": 1
+      },
+      "scenarios": {
+        "declined-hold": {
+          "runs": 1,
+          "passed": 0,
+          "failed": 0,
+          "inconclusive": 1,
+          "failedChecks": []
+        }
+      },
+      "configurationConsistent": false,
+      "passed": false
+    },
+    "passed": false
+  },
+  "connectionDiagnostic": {
+    "signedUrlHttpStatus": 200,
+    "signedUrlPresent": true,
+    "websocketCloseCode": 3000,
+    "underlyingCause": "undetermined",
+    "note": "A separate SDK connection attempt was rejected before session metadata. Neither raw close reasons nor signed URLs were retained. The agent daily limit was 100000 and its concurrency limit was -1; no account billing or quota cause is established."
+  },
+  "interpretation": [
+    "Six completed live samples passed under the same captured fingerprint, including unclear-approval. No behavior check failure was recorded.",
+    "The initial matrix has eight inconclusive connection failures. The isolated declined-hold retry is also inconclusive. Declined-hold and repeated reliability remain unverified in this batch.",
+    "configurationConsistent is false because failed attempts lack captured metadata in this evaluator revision; this does not establish that the configuration changed.",
+    "Successful run metadata records source revision 15ba7de and a clean worktree. Historical results are unchanged by later diagnostic improvements.",
+    "These text-only samples do not test microphone permissions, speech recognition, audio, or interruptions."
+  ]
+}

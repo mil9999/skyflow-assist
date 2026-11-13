@@ -1,3 +1,4 @@
+import { assertSessionActor, type ServiceActor } from "./session-control";
 import { airportName } from "../../domain/airports";
 import { AuditAction, FlightStatus } from "../../domain/constants";
 import { DomainError, ErrorCode } from "../../domain/errors";
@@ -32,11 +33,13 @@ export interface DisruptedBookingResult {
 
 export async function getDisruptedBooking(
   input: GetDisruptedBookingInput,
+  actor: ServiceActor = "AI",
 ): Promise<DisruptedBookingResult> {
   const session = await sessionRepository.findById(prisma, input.sessionId);
   if (!session) {
     throw new DomainError(ErrorCode.INVALID_STATE, "Unknown session.");
   }
+  assertSessionActor(session, actor);
   if (session.state !== "VERIFIED") {
     throw new DomainError(
       ErrorCode.INVALID_STATE,
@@ -68,7 +71,7 @@ export async function getDisruptedBooking(
   const disruption = await flightRepository.findDisruption(prisma, flight.id);
 
   assertTransitionAllowed(session.state, "BOOKING_LOADED");
-  await sessionRepository.transition(prisma, session.id, "BOOKING_LOADED");
+  await sessionRepository.transition(prisma, session.id, "BOOKING_LOADED", {}, actor);
   await auditService.record(prisma, session.id, AuditAction.BOOKING_RETRIEVED, {
     bookingReference: booking.bookingReference,
     flightNumber: flight.flightNumber,

@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
-import { createConversation, clearConversations } from "../src/agent/conversation-store";
+import { createConversation } from "../src/agent/conversation-store";
 import { executeTool } from "../src/agent/tool-executor";
 import type { SimulatorConversation } from "../src/agent/types";
 import { prisma } from "../src/server/db/prisma";
@@ -10,7 +10,6 @@ import { resetDatabase, seedScenario, type Fixture } from "./helpers/fixtures";
 let fx: Fixture;
 
 beforeEach(async () => {
-  clearConversations();
   await resetDatabase();
   fx = await seedScenario();
 });

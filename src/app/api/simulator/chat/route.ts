@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { isDomainError } from "@/domain/errors";
 
-import { getConversation } from "@/agent/conversation-store";
+import { ConversationConflictError, getConversation } from "@/agent/conversation-store";
 import { runTurn } from "@/agent/conversation-runner";
 import { agentModel, agentReasoningEffort, getProvider } from "@/server/llm";
 import { prisma } from "@/server/db/prisma";
@@ -25,21 +26,30 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ ok: false, error: "Invalid request." }, { status: 400 });
   }
 
-  const conversation = getConversation(parsed.data.conversationId);
+  const conversation = await getConversation(parsed.data.conversationId);
   if (!conversation) {
     return Response.json(
-      { ok: false, error: "That conversation has expired. Start a new one." },
+      { ok: false, error: "That conversation was not found. Start a new one." },
       { status: 404 },
     );
   }
 
-  const result = await runTurn({
-    conversation,
-    userMessage: parsed.data.message,
-    provider: getProvider(),
-    model: agentModel(),
-    reasoningEffort: agentReasoningEffort(),
-  });
+  let result;
+  try {
+    result = await runTurn({
+      conversation,
+      userMessage: parsed.data.message,
+      provider: getProvider(),
+      model: agentModel(),
+      reasoningEffort: agentReasoningEffort(),
+    });
+  } catch (error) {
+    if (isDomainError(error)) return Response.json({ ok: false, error: error.message, code: error.code }, { status: 409 });
+    if (error instanceof ConversationConflictError) {
+      return Response.json({ ok: false, error: error.message }, { status: 409 });
+    }
+    throw error;
+  }
 
   if (result.stopReason === "PROVIDER_CONFIGURATION") {
     return Response.json(

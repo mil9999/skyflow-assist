@@ -1,11 +1,32 @@
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import type { TestProject } from "vitest/node";
 
-/** Builds a throwaway database from the current schema, once per test run. */
-export default function setup() {
-  const url = `file:${process.cwd()}/prisma/test.db`;
+/** Applies real migrations to a new database, without resetting existing data. */
+export default function setup(project: TestProject) {
+  const directory = mkdtempSync(join(tmpdir(), "skyflow-tests-"));
+  const database = join(directory, "test.db");
+  const url = `file:${database}`;
+  writeFileSync(database, "");
 
-  execSync("npx prisma db push --force-reset --accept-data-loss --skip-generate", {
-    stdio: "inherit",
-    env: { ...process.env, DATABASE_URL: url },
-  });
+  try {
+    execFileSync(process.execPath, [resolve("node_modules/prisma/build/index.js"), "migrate", "deploy"], {
+      stdio: "inherit",
+      env: { ...process.env, DATABASE_URL: url },
+    });
+    project.provide("testDatabaseUrl", url);
+  } catch (error) {
+    rmSync(directory, { recursive: true, force: true });
+    throw error;
+  }
+
+  return () => rmSync(directory, { recursive: true, force: true });
+}
+
+declare module "vitest" {
+  export interface ProvidedContext {
+    testDatabaseUrl: string;
+  }
 }

@@ -1,7 +1,9 @@
+import { assertSessionActor, type ServiceActor } from "./session-control";
 import { AuditAction } from "../../domain/constants";
 import { DomainError, ErrorCode } from "../../domain/errors";
 import { assertTransitionAllowed } from "../../domain/rebooking-state";
 import { prisma } from "../db/prisma";
+import { releaseAndRewind } from "./rebooking-service";
 import * as sessionRepository from "../repositories/session-repository";
 import * as supportRepository from "../repositories/support-repository";
 import * as auditService from "./audit-service";
@@ -32,14 +34,20 @@ export interface EscalateResult {
  * terminal ones. The state we escalated *from* is recorded on the support case,
  * not duplicated onto the session.
  */
-export async function escalateSession(input: EscalateInput): Promise<EscalateResult> {
+export async function escalateSession(input: EscalateInput, actor: ServiceActor = "AI"): Promise<EscalateResult> {
   return prisma.$transaction(async (tx) => {
     const session = await sessionRepository.findById(tx, input.sessionId);
     if (!session) {
       throw new DomainError(ErrorCode.INVALID_STATE, "Unknown session.");
     }
+    assertSessionActor(session, actor);
 
     assertTransitionAllowed(session.state, "ESCALATED");
+
+    if (session.activeHoldId) {
+      const held = await tx.rebookingHold.findUnique({ where: { id: session.activeHoldId } });
+      if (held?.status === "ACTIVE") await releaseAndRewind(tx, held, session, "CANCELLED", actor);
+    }
 
     const supportCase = await supportRepository.create(tx, {
       sessionId: session.id,
@@ -47,7 +55,7 @@ export async function escalateSession(input: EscalateInput): Promise<EscalateRes
       escalatedFromState: session.state,
     });
 
-    await sessionRepository.transition(tx, session.id, "ESCALATED");
+    await sessionRepository.transition(tx, session.id, "ESCALATED", { activeHoldId: null }, actor);
 
     await auditService.record(tx, session.id, AuditAction.HUMAN_TRANSFER_REQUESTED, {
       reason: input.reason,
