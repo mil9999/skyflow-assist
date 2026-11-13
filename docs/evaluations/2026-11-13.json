@@ -6,14 +6,46 @@
   "database": "fresh migrated temporary SQLite database per scenario",
   "sampleSizePerScenario": 1,
   "results": [
-    { "scenario": "rebooking", "outcome": "passed", "durationMs": 16229, "stepsPassed": 4, "checksPassed": 16 },
-    { "scenario": "no-alternatives", "outcome": "passed", "durationMs": 8031, "stepsPassed": 1, "checksPassed": 6 },
-    { "scenario": "failed-verification", "outcome": "passed", "durationMs": 9466, "stepsPassed": 2, "checksPassed": 14 }
+    {
+      "scenario": "rebooking",
+      "outcome": "passed",
+      "durationMs": 16229,
+      "stepsPassed": 4,
+      "checksPassed": 16
+    },
+    {
+      "scenario": "no-alternatives",
+      "outcome": "passed",
+      "durationMs": 8031,
+      "stepsPassed": 1,
+      "checksPassed": 6
+    },
+    {
+      "scenario": "failed-verification",
+      "outcome": "passed",
+      "durationMs": 9466,
+      "stepsPassed": 2,
+      "checksPassed": 14
+    },
+    {
+      "scenario": "expired-hold",
+      "outcome": "passed",
+      "durationMs": 20819,
+      "stepsPassed": 5,
+      "checksPassed": 20
+    },
+    {
+      "scenario": "employee-takeover",
+      "outcome": "passed",
+      "durationMs": 13423,
+      "stepsPassed": 3,
+      "checksPassed": 18
+    }
   ],
   "limits": [
     "Individual samples; no reliability estimate.",
     "Configured remote model was not pinned or captured by this evaluator.",
     "Reply completion uses a two-second quiet interval after a post-tool response.",
-    "No microphone, audio, interruption, live expired-hold, or employee takeover evaluation in this sample."
+    "No microphone, audio, interruption, or browser UI evaluation in this sample. Employee takeover uses a trusted server hook and a separate delayed-request probe."
   ]
 }

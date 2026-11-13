@@ -26,7 +26,17 @@ export class ScriptedEvaluationTransport implements EvaluationTransport {
       await this.tool("hold_selected_flight", { optionId: "option_1" });
       return "SF218 is held, departing tomorrow at 13:00 UTC and arriving 15:15 UTC with no extra charge. Do you confirm?";
     }
-    if (turn === 2) return "Please give a clear yes before I change the booking.";
+    if (turn === 2 && this.scenario === "employee-takeover") return "An employee controls the booking. Please continue by text in the employee assistance panel.";
+    if (this.scenario === "expired-hold") {
+      if (turn === 2) {
+        await this.tool("search_alternative_flights", {});
+        return "The old hold expired. Here are the alternatives again; a new hold and confirmation are needed.";
+      }
+      if (turn === 3) {
+        await this.tool("hold_selected_flight", { optionId: "option_1" });
+        return "SF218 is held again, departing tomorrow at 13:00 UTC and arriving at 15:15 UTC. Do you confirm this new hold?";
+      }
+    } else if (turn === 2) return "Please give a clear yes before I change the booking.";
     await this.tool("confirm_flight_rebooking", { confirmed: true });
     return "Your booking is confirmed on SF218.";
   }

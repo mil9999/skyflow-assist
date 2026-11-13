@@ -6,9 +6,9 @@ import { fileURLToPath } from "node:url";
 import nextEnv from "@next/env";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const scenarios = ["rebooking", "no-alternatives", "failed-verification"];
+const scenarios = ["rebooking", "no-alternatives", "failed-verification", "expired-hold", "employee-takeover"];
 const args = process.argv.slice(2);
-const usage = "Usage: npm run eval:voice -- (--offline | --live) [--scenario all|rebooking|no-alternatives|failed-verification] [--runs 1..5]\n--offline rehearses scripted fixtures without AI calls. --live uses ElevenLabs account credits through text mode (no microphone). Reports contain checks and tool names, not credentials or full transcripts.";
+const usage = `Usage: npm run eval:voice -- (--offline | --live) [--scenario all|${scenarios.join("|")}] [--runs 1..5]\n--offline rehearses scripted fixtures without AI calls. --live uses ElevenLabs account credits through text mode (no microphone). Reports contain checks and tool names, not credentials or full transcripts.`;
 if (!args.length || args.includes("--help")) { console.log(usage); process.exit(0); }
 let mode; let selected = "all"; let runs = 1;
 for (let i = 0; i < args.length; i++) {
