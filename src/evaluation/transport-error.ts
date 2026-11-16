@@ -1,11 +1,19 @@
+import { VoiceConnectionError } from "../server/voice/elevenlabs";
+import type { ProviderStatus } from "../server/voice/provider-status";
+
 /** Safe diagnostic fields only; provider messages can contain signed URLs. */
 export class EvaluationTransportError extends Error {
-  constructor(public readonly reason: "CONNECTION_REJECTED", public readonly connectionCloseCode?: number) { super(reason); }
+  constructor(public readonly reason: "CONNECTION_REJECTED" | "PROVIDER_ERROR" | "TRANSPORT_DISCONNECTED", public readonly connectionCloseCode?: number, public readonly providerStatus?: ProviderStatus) { super(reason); }
 }
 
 export function evaluationFailure(error: unknown) {
   if (error instanceof EvaluationTransportError) {
-    return { reason: error.reason, ...(error.connectionCloseCode === undefined ? {} : { connectionCloseCode: error.connectionCloseCode }) };
+    return { reason: error.reason, ...(error.connectionCloseCode === undefined ? {} : { connectionCloseCode: error.connectionCloseCode }),
+      ...(error.providerStatus === undefined ? {} : { providerStatus: error.providerStatus }) };
+  }
+  if (error instanceof VoiceConnectionError) {
+    return { reason: error.reason, connectionStage: "signed-url", ...(error.httpStatus === undefined ? {} : { httpStatus: error.httpStatus }),
+      ...(error.providerStatus === undefined ? {} : { providerStatus: error.providerStatus }) };
   }
   const known: Record<string, string> = {
     "Live evaluation requires Node.js 22 or newer with built-in WebSocket support.": "UNSUPPORTED_RUNTIME",

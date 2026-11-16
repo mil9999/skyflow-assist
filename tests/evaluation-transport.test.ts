@@ -2,10 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Conversation, SessionConnectionError } from "@elevenlabs/client";
 import { ElevenLabsEvaluationTransport } from "../src/evaluation/elevenlabs-transport";
 import { evaluationFailure } from "../src/evaluation/transport-error";
+import { VoiceConnectionError } from "../src/server/voice/elevenlabs";
 
 const { startSession, getSignedVoiceUrl } = vi.hoisted(() => ({ startSession: vi.fn(), getSignedVoiceUrl: vi.fn() }));
 vi.mock("@elevenlabs/client", async (original) => ({ ...await original<typeof import("@elevenlabs/client")>(), Conversation: { startSession } }));
-vi.mock("../src/server/voice/elevenlabs", () => ({ getSignedVoiceUrl }));
+vi.mock("../src/server/voice/elevenlabs", async (original) => ({ ...await original<typeof import("../src/server/voice/elevenlabs")>(), getSignedVoiceUrl }));
 afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); vi.resetAllMocks(); });
 
 async function connectedTransport(tool: (name: string, args: Record<string, unknown>) => Promise<string> = async () => "{}") {
@@ -46,6 +47,49 @@ describe("safe evaluation connection diagnostics", () => {
     await transport.end();
     expect(evaluationFailure(new Error("secret request headers"))).toEqual({ reason: "LOCAL_EVALUATION_ERROR" });
     expect(evaluationFailure(new Error("__proto__"))).toEqual({ reason: "LOCAL_EVALUATION_ERROR" });
+  });
+  it("keeps signed-URL refusal distinct from WebSocket startup", async () => {
+    getSignedVoiceUrl.mockRejectedValue(new VoiceConnectionError("Safe unavailable message", "SIGNED_URL_REFUSED", 429, "system_busy"));
+    const transport = new ElevenLabsEvaluationTransport();
+    let failure;
+    try { await transport.start(async () => "{}"); } catch (error) { failure = evaluationFailure(error); }
+    expect(failure).toEqual({ reason: "SIGNED_URL_REFUSED", connectionStage: "signed-url", httpStatus: 429, providerStatus: "system_busy" });
+    expect(startSession).not.toHaveBeenCalled();
+    await transport.end();
+  });
+  it("retains only a recognized provider token from a rejected WebSocket", async () => {
+    getSignedVoiceUrl.mockResolvedValue("wss://api.elevenlabs.io/?token=private-fixture-token");
+    startSession.mockRejectedValue(new SessionConnectionError("private provider details", { closeCode: 3000, closeReason: "quota_exceeded: private account and key details" }));
+    const transport = new ElevenLabsEvaluationTransport();
+    let failure;
+    try { await transport.start(async () => "{}"); } catch (error) { failure = evaluationFailure(error); }
+    expect(failure).toEqual({ reason: "CONNECTION_REJECTED", connectionCloseCode: 3000, providerStatus: "quota_exceeded" });
+    expect(JSON.stringify(failure)).not.toMatch(/private|account|details/);
+    await transport.end();
+  });
+  it("combines an early provider error with its later SDK close details", async () => {
+    getSignedVoiceUrl.mockResolvedValue("wss://api.elevenlabs.io/?token=fixture");
+    startSession.mockImplementation(async (options: Parameters<typeof Conversation.startSession>[0]) => {
+      options.onError?.("system_busy: private details");
+      throw new SessionConnectionError("private", { closeCode: 3000 });
+    });
+    const transport = new ElevenLabsEvaluationTransport();
+    let failure;
+    try { await transport.start(async () => "{}"); } catch (error) { failure = evaluationFailure(error); }
+    expect(failure).toEqual({ reason: "PROVIDER_ERROR", connectionCloseCode: 3000, providerStatus: "system_busy" });
+    await transport.end();
+  });
+  it("preserves a reported provider status through the subsequent disconnect callback", async () => {
+    const { transport, callbacks } = await connectedTransport();
+    const response = transport.exchange("Find alternatives");
+    const rejected = expect(response).rejects.toThrow("PROVIDER_ERROR");
+    callbacks.onError?.("system_busy: private account details");
+    callbacks.onDisconnect?.({ reason: "error", message: "private", context: { type: "close" }, closeCode: 3000, closeReason: "private" });
+    await rejected;
+    let failure;
+    try { await transport.exchange("Retry"); } catch (error) { failure = evaluationFailure(error); }
+    expect(failure).toEqual({ reason: "PROVIDER_ERROR", connectionCloseCode: 3000, providerStatus: "system_busy" });
+    await transport.end();
   });
 });
 

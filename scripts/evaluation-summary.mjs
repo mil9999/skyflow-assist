@@ -1,6 +1,6 @@
 /** Summarize only sanitized worker results. Never ingest provider responses. */
 export function shouldStopLiveBatch(results) {
-  const connectionReasons = new Set(["CONNECTION_FAILED", "CONNECTION_REJECTED", "PROVIDER_ERROR", "TRANSPORT_DISCONNECTED", "AGENT_CONFIGURATION_UNAVAILABLE"]);
+  const connectionReasons = new Set(["CONNECTION_FAILED", "CONNECTION_REJECTED", "PROVIDER_ERROR", "TRANSPORT_DISCONNECTED", "AGENT_CONFIGURATION_UNAVAILABLE", "VOICE_CONFIGURATION_MISSING", "SIGNED_URL_REFUSED", "SIGNED_URL_INVALID_RESPONSE", "SIGNED_URL_TIMEOUT", "SIGNED_URL_NETWORK_FAILURE"]);
   return results.length >= 2 && results.slice(-2).every((result) => result.outcome === "inconclusive" && connectionReasons.has(result.reason));
 }
 

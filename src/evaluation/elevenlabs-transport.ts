@@ -1,6 +1,7 @@
 import { Conversation, SessionConnectionError, type TextConversation } from "@elevenlabs/client";
 import { AGENT_TOOL_NAMES } from "../agent/tool-definitions";
-import { getSignedVoiceUrl } from "../server/voice/elevenlabs";
+import { getSignedVoiceUrl, VoiceConnectionError } from "../server/voice/elevenlabs";
+import { safeProviderStatus } from "../server/voice/provider-status";
 import type { EvaluationTransport } from "./voice-runner";
 import { EvaluationTransportError } from "./transport-error";
 
@@ -34,9 +35,9 @@ export class ElevenLabsEvaluationTransport implements EvaluationTransport {
           this.replyAfterTools = this.activeTools === 0;
           this.scheduleQuiet();
         },
-        onError: () => this.fail("ElevenLabs reported a conversation error."),
-        onDisconnect: ({ reason }) => {
-          if (reason === "error") this.fail("ElevenLabs disconnected unexpectedly.");
+        onError: (message) => this.fail(new EvaluationTransportError("PROVIDER_ERROR", undefined, safeProviderStatus(message))),
+        onDisconnect: (details) => {
+          if (details.reason === "error") this.fail(new EvaluationTransportError("TRANSPORT_DISCONNECTED", validCloseCode(details.closeCode), safeProviderStatus(details.closeReason)));
           else if (this.pending) {
             if (this.replies.length && this.replyAfterTools && this.activeTools === 0) this.complete();
             else this.fail("The agent disconnected before completing its reply.");
@@ -45,10 +46,14 @@ export class ElevenLabsEvaluationTransport implements EvaluationTransport {
       });
       await greeting;
     } catch (error) {
-      const closeCode = error instanceof SessionConnectionError && Number.isInteger(error.closeCode) && error.closeCode! >= 1000 && error.closeCode! <= 4999 ? error.closeCode : undefined;
-      this.fail(this.failure ?? (closeCode === undefined
-        ? "Could not start the live ElevenLabs evaluation. Check credentials, agent access, and network connectivity."
-        : new EvaluationTransportError("CONNECTION_REJECTED", closeCode)));
+      const previous = this.failure;
+      const closeCode = error instanceof SessionConnectionError ? validCloseCode(error.closeCode) : undefined;
+      const status = error instanceof SessionConnectionError ? safeProviderStatus(error.closeReason) : undefined;
+      this.fail(previous instanceof EvaluationTransportError
+        ? new EvaluationTransportError(previous.reason, closeCode ?? previous.connectionCloseCode, status ?? previous.providerStatus)
+        : previous ?? (error instanceof VoiceConnectionError ? error : error instanceof SessionConnectionError
+          ? new EvaluationTransportError("CONNECTION_REJECTED", closeCode, status)
+          : "Could not start the live ElevenLabs evaluation. Check credentials, agent access, and network connectivity."));
       throw this.failure;
     }
   }
@@ -83,7 +88,13 @@ export class ElevenLabsEvaluationTransport implements EvaluationTransport {
     pending.resolve(this.replies.join("\n"));
   }
   private fail(message: string | Error) {
-    this.failure = typeof message === "string" ? new Error(message) : message;
+    const next = typeof message === "string" ? new Error(message) : message;
+    // SDK callbacks can report the same failure before its close details arrive.
+    // Preserve the first cause and enrich only with whitelisted diagnostics.
+    if (!this.failure) this.failure = next;
+    else if (this.failure instanceof EvaluationTransportError && next instanceof EvaluationTransportError) {
+      this.failure = new EvaluationTransportError(this.failure.reason, next.connectionCloseCode ?? this.failure.connectionCloseCode, next.providerStatus ?? this.failure.providerStatus);
+    }
     const pending = this.pending; this.pending = undefined;
     if (pending) { clearTimeout(pending.deadline); pending.reject(this.failure); }
     this.cancelQuiet();
@@ -93,4 +104,8 @@ export class ElevenLabsEvaluationTransport implements EvaluationTransport {
     if (this.pending) this.fail("Evaluation ended before a reply completed.");
     await this.conversation?.endSession();
   }
+}
+
+function validCloseCode(value: number | undefined) {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1000 && value <= 4999 ? value : undefined;
 }

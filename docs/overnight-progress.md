@@ -1,6 +1,6 @@
 # SkyFlow Assist development checkpoint
 
-Updated: 13 November 2026 (Europe/Paris overnight window). Repository: `mil9999/skyflow-assist` (public). Current work branch: `codex/complete-disruption-demo`.
+Updated: 16 November 2026 (Europe/Paris overnight window). Repository: `mil9999/skyflow-assist` (public). Current work branch: `codex/complete-disruption-demo`.
 
 ## Completed in the current milestone
 
@@ -77,12 +77,20 @@ The user explicitly requested a new one-hour work session after the overnight wi
 - Refreshed the dependency audit on 13 November: 11 reported findings (4 high, 7 moderate) before maintenance. Updated Zod **4.4.3 → 4.6.7**, including the declared dependency floor and lockfile, addressing [GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5). The install report now has 10 findings (3 high, 7 moderate); `npm audit --omit=dev --json` still reports the three high entries in Prisma → `@prisma/config` → `deepmerge-ts`, with a major Prisma 7.10.1 migration proposed. No forced major update or override was applied. The [recursive-merge advisory](https://github.com/advisories/GHSA-ggr8-5vv4-36mx) and [lint-chain minimatch advisory](https://github.com/advisories/GHSA-g3hv-75wg-m249) remain tracked work. Audit counts alone do not establish exploitability in this application.
 - Final validation after the Zod update and reply-boundary fix: **201 tests in 17 files pass**, lint, production Webpack build (24 generated pages), and standalone TypeScript pass. The local development server remains running. Live evaluation data and saved/interactive application databases were preserved.
 
+## Private voice connection diagnostics (16 November)
+
+- Distinguished configuration, signed-URL HTTP refusal, malformed provider responses, network failures, and timeouts from SDK connection rejection. Evaluation reports now retain a safe stage/reason and numeric HTTP status instead of discarding all signed-URL evidence as a generic connection failure.
+- Added a four-token provider-status allowlist (`invalid_api_key`, `quota_exceeded`, `too_many_concurrent_requests`, `system_busy`). Structured status fields or leading status tokens can be retained; arbitrary text, URLs, headers, response extras, and unknown codes cannot. No quota or billing cause is inferred from close code `3000`.
+- Preserved an earlier tool/timeout cause across subsequent SDK callbacks. Recognized provider failures can retain safe close details; late/unavailable metadata is not invented. The existing batch cutoff also covers the new signed-URL failure reasons.
+- Validation: **228 tests in 18 files pass**, including private-field exclusion, status-token lookalikes inside URLs, malformed HTTP bodies/URLs, HTTP refusal, network/timeout distinction, and SDK callback ordering. Lint, standalone TypeScript (`--incremental false`), and the production Webpack build pass (24 generated pages). The pre-build standalone type check encountered the previously recorded stale numbered generated type paths; fresh TypeScript verification passed after the successful build without incremental cache reuse. No browser UI, remote agent configuration, credentials, or saved demo database was changed.
+- These diagnostics do not resolve the historical pre-session rejection or convert the incomplete 13 November matrix into a pass. A bounded live probe from a clean source checkpoint is the next diagnostic step; record its actual outcome separately.
+
 ## Next concrete work
 
 1. Diagnose the provider's pre-session WebSocket rejection (close code `3000`), then rerun the fixed seven-case matrix with repeated runs and configuration capture. Approval/cancellation variants and configuration capture are implemented. Preserve the incomplete 13 November matrix; do not convert its inconclusive cases into passes. The current environment has ElevenLabs credentials but no OpenAI text-model key; do not expose either. Keep live runs explicitly opt-in and reports free of credentials, signed URLs, airline IDs, and full transcripts.
 2. Validate microphone speech recognition, audio, interruptions, and spoken rebooking with the user. Microphone permission for the local voice page is still pending; no spoken acceptance is claimed. All five initial live text scenarios now pass once each.
 3. Address the remaining dependency findings in a separate verified change: compatible lint-chain updates, then a planned Prisma major migration with SQLite backup and migration/recovery checks. The 17 October audit below is historical; the 13 November audit above is the current recorded result.
-3. Prepare employee login, passenger access controls, hosted storage and session handling, a production expiry scheduler, and dependency advisory remediation before any deployment. Real airline APIs, payments, refunds, compensation, and telephony remain outside the current demonstration.
+4. Prepare employee login, passenger access controls, hosted storage and session handling, a production expiry scheduler, and dependency advisory remediation before any deployment. Real airline APIs, payments, refunds, compensation, and telephony remain outside the current demonstration.
 
 ## Persistent text conversation milestone (5 November)
 

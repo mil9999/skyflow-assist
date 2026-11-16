@@ -100,6 +100,7 @@ describe("evaluation batch summary", () => {
     expect(shouldStopLiveBatch([failure, { outcome: "passed" }, failure])).toBe(false);
     expect(shouldStopLiveBatch([failure, { outcome: "failed" }])).toBe(false);
     expect(shouldStopLiveBatch([failure, { outcome: "inconclusive", reason: "LOCAL_TOOL_FAILED" }])).toBe(false);
+    expect(shouldStopLiveBatch([failure, { outcome: "inconclusive", reason: "SIGNED_URL_REFUSED" }])).toBe(true);
   });
   it("counts failures and inconclusive runs separately", () => {
     const result = summarizeEvaluation([
