@@ -1,4 +1,3 @@
-import { clearConversations } from "@/agent/conversation-store";
 import { resetDemoScenario } from "@/server/demo/scenario";
 
 export const runtime = "nodejs";
@@ -26,7 +25,6 @@ export async function POST(): Promise<Response> {
   }
 
   const summary = await resetDemoScenario();
-  clearConversations();
 
   return Response.json({ ok: true, summary });
 }

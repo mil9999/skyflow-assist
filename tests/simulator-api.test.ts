@@ -3,12 +3,10 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 import { POST as chatRoute } from "../src/app/api/simulator/chat/route";
 import { POST as resetDemoRoute } from "../src/app/api/simulator/reset-demo/route";
 import { POST as sessionsRoute } from "../src/app/api/simulator/sessions/route";
-import { clearConversations } from "../src/agent/conversation-store";
 import { prisma } from "../src/server/db/prisma";
 import { resetDatabase, seedScenario } from "./helpers/fixtures";
 
 beforeEach(async () => {
-  clearConversations();
   await resetDatabase();
   await seedScenario();
 });

@@ -1,4 +1,6 @@
 import type { DatabaseClient } from "../db/prisma";
+import { DomainError, ErrorCode } from "../../domain/errors";
+import type { ServiceActor } from "../services/session-control";
 
 export function create(db: DatabaseClient, channel: "TEXT" | "VOICE" = "TEXT") {
   return db.conversationSession.create({
@@ -24,14 +26,17 @@ export interface TransitionData {
  * Writes the new state. Callers must have already run assertTransitionAllowed —
  * this function deliberately does not know the rules, only how to persist them.
  */
-export function transition(
+export async function transition(
   db: DatabaseClient,
   id: string,
   nextState: string,
   data: TransitionData = {},
+  actor: ServiceActor = "AI",
 ) {
-  return db.conversationSession.update({
-    where: { id },
+  const changed = await db.conversationSession.updateMany({
+    where: { id, ...(actor === "SYSTEM" ? {} : { controller: actor }) },
     data: { state: nextState, ...data },
   });
+  if (changed.count !== 1) throw new DomainError(ErrorCode.SESSION_TAKEN_OVER, "Conversation control changed. Refresh before continuing.");
+  return db.conversationSession.findUniqueOrThrow({ where: { id } });
 }

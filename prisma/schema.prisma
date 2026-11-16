@@ -82,13 +82,68 @@ model ConversationSession {
   // Navigation only. The selected flight lives on RebookingHold.newFlightId and
   // "confirmation required" is derived from state === AWAITING_CONFIRMATION.
   activeHoldId String?
+  controller   String    @default("AI") // AI | EMPLOYEE
+  takenOverAt  DateTime?
 
   booking            Booking?            @relation(fields: [bookingId], references: [id])
   events             AuditEvent[]
   supportCases       SupportCase[]
   idempotencyRecords IdempotencyRecord[]
+  textConversation   TextConversation?
+  voiceConversation  VoiceConversation?
+  transcript         ConversationEntry[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
+}
+
+// Completed text turns and their server-only tool context. An interrupted turn
+// stays locked rather than replaying a possibly committed booking operation.
+model TextConversation {
+  id        String              @id
+  sessionId String              @unique
+  snapshot  String // JSON: model history, transcript, opaque option mappings
+  version   Int                 @default(0)
+  busy      Boolean             @default(false)
+  session   ConversationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+}
+
+model VoiceConversation {
+  id        String              @id
+  sessionId String              @unique
+  snapshot  String
+  closed    Boolean             @default(false)
+  busy      Boolean             @default(false)
+  version   Int                 @default(0)
+  session   ConversationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  calls     VoiceToolCall[]
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+}
+
+model VoiceToolCall {
+  conversationId String
+  callId         String
+  signature      String
+  response       String
+  conversation   VoiceConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime           @default(now())
+
+  @@id([conversationId, callId])
+}
+
+model ConversationEntry {
+  id        String              @id @default(cuid())
+  sessionId String
+  sourceId  String
+  role      String // USER | ASSISTANT | EMPLOYEE | SYSTEM
+  content   String
+  session   ConversationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt DateTime            @default(now())
+
+  @@unique([sessionId, sourceId])
+  @@index([sessionId, createdAt])
 }
 
 model SupportCase {

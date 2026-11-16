@@ -1,3 +1,4 @@
+import { assertSessionActor, type ServiceActor } from "./session-control";
 import { AuditAction, MAX_VERIFICATION_ATTEMPTS } from "../../domain/constants";
 import { DomainError, ErrorCode, invalidCredentials } from "../../domain/errors";
 import { assertTransitionAllowed } from "../../domain/rebooking-state";
@@ -44,11 +45,13 @@ export interface VerifyPassengerResult {
  */
 export async function verifyPassenger(
   input: VerifyPassengerInput,
+  actor: ServiceActor = "AI",
 ): Promise<VerifyPassengerResult> {
   const session = await sessionRepository.findById(prisma, input.sessionId);
   if (!session) {
     throw new DomainError(ErrorCode.INVALID_STATE, "Unknown session.");
   }
+  assertSessionActor(session, actor);
   if (session.state !== "UNVERIFIED") {
     throw new DomainError(ErrorCode.INVALID_STATE, "This session has already been verified.");
   }
@@ -75,14 +78,14 @@ export async function verifyPassenger(
       await escalateSession({
         sessionId: session.id,
         reason: EscalationReason.VERIFICATION_FAILED,
-      });
+      }, actor);
     }
 
     throw invalidCredentials();
   }
 
   assertTransitionAllowed(session.state, "VERIFIED");
-  await sessionRepository.transition(prisma, session.id, "VERIFIED", { bookingId: booking.id });
+  await sessionRepository.transition(prisma, session.id, "VERIFIED", { bookingId: booking.id }, actor);
   await auditService.record(prisma, session.id, AuditAction.PASSENGER_VERIFIED, {
     bookingReference: booking.bookingReference,
   });
