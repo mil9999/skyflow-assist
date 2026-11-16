@@ -1,0 +1,69 @@
+{
+  "mode": "live-elevenlabs-text",
+  "startedAt": "2026-11-16T01:07:09.871Z",
+  "sourceRevision": "76d6e173eceee99a23327903f9d4faa34be198ea",
+  "worktreeDirty": false,
+  "results": [
+    {
+      "run": 1,
+      "scenario": "no-alternatives",
+      "mode": "live",
+      "passed": false,
+      "outcome": "inconclusive",
+      "durationMs": 1123,
+      "steps": [],
+      "reason": "CONNECTION_REJECTED",
+      "connectionCloseCode": 3000,
+      "configuration": {
+        "provider": "elevenlabs",
+        "agent": "SkyFlow Assist",
+        "configuredModel": "deepseek-v41-flash",
+        "temperature": 0,
+        "reasoningEffort": null,
+        "maxTokens": -1,
+        "serviceTier": "standard",
+        "parallelTools": true,
+        "backupLlmConfig": {
+          "preference": "default"
+        },
+        "cascadeTimeoutSeconds": 4,
+        "language": "en",
+        "maxDurationSeconds": 600,
+        "promptSha256": "e35b21b71958cb969c363012f850fb009bf5e8a2132ae2fe22e6e1975ec2a62d",
+        "firstMessageSha256": "034c052e5ccf6a2d8a8b96aaa04c33f280c890fb59d8ff40d1912e1db83bb7b2",
+        "localToolsSha256": "1798b27feb675b54cf3a6149927702a4c83f7a4616eb51949790527836d5b5be",
+        "remoteToolReferencesSha256": "0d36354b8efb6fbec8e91e7337e368d5ff58f6c67e369076928c770ccb26cb3d",
+        "remoteToolCount": 7,
+        "revisionSha256": "066ff2220e27be96f298192a859a19d252c6ae7f4f264fcedd3901079457cb97",
+        "matchesLocalPrompt": true,
+        "fingerprint": "e6d91c604a9223ee36f5085d69b0e5a426f84cca65a5c99073e13ca642137ba1"
+      },
+      "runtime": {
+        "node": "v25.8.1",
+        "sdkVersion": "1.28.0",
+        "sourceRevision": "76d6e173eceee99a23327903f9d4faa34be198ea",
+        "worktreeDirty": false
+      }
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "counts": {
+      "passed": 0,
+      "failed": 0,
+      "inconclusive": 1
+    },
+    "scenarios": {
+      "no-alternatives": {
+        "runs": 1,
+        "passed": 0,
+        "failed": 0,
+        "inconclusive": 1,
+        "failedChecks": []
+      }
+    },
+    "configurationConsistent": true,
+    "passed": false
+  },
+  "passed": false
+}
