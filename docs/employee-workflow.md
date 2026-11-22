@@ -13,6 +13,8 @@ This is a local demonstration using fictional passengers. Run `npm run setup:dem
 
 The simulator's interactive fake provider gives canned replies. The three scripted scenario buttons demonstrate full automated workflows and reset the fictional data before each run. Do not reset the demo during an employee journey, since reset removes its sessions and transcript.
 
+If the passenger declines a held flight, choose **Release seat** before holding another alternative. Release applies to the held flight shown in that window. Repeated or delayed releases of an older flight leave a replacement hold and its reserved seat intact.
+
 ## Review escalated cases
 
 `SKY55T` / `Okafor` has no eligible replacement flights. The AI can create a support case, and an employee can take over to explain the situation by text. This demo does not provide refunds, compensation, real airline inventory, or an external contact-centre connection.

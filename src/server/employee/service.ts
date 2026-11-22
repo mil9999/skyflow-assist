@@ -18,7 +18,7 @@ export const employeeActionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("load") }).strict(),
   z.object({ action: z.literal("search"), directOnly: z.boolean().optional() }).strict(),
   z.object({ action: z.literal("hold"), flightId: z.string().min(1) }).strict(),
-  z.object({ action: z.literal("release") }).strict(),
+  z.object({ action: z.literal("release"), holdId: z.string().min(1) }).strict(),
   z.object({ action: z.literal("confirm"), holdId: z.string().min(1), confirmed: z.boolean() }).strict(),
   z.object({ action: z.literal("message"), content: z.string().trim().min(1).max(4000), messageId: z.string().min(1).max(100) }).strict(),
   z.object({ action: z.literal("resolve") }).strict(),
@@ -62,10 +62,9 @@ export async function employeeAction(sessionId: string, action: EmployeeAction) 
     case "load": return getDisruptedBooking({ sessionId }, "EMPLOYEE");
     case "search": return searchAlternativeFlights({ sessionId, directOnly: action.directOnly }, "EMPLOYEE");
     case "hold": return holdAlternativeFlight({ sessionId, flightId: action.flightId }, "EMPLOYEE");
-    case "release": {
-      if (!session.activeHoldId) throw new DomainError(ErrorCode.INVALID_STATE, "There is no active hold.");
-      return cancelHold({ sessionId, holdId: session.activeHoldId }, "EMPLOYEE");
-    }
+    // Keep the displayed hold as the target even if another window replaces it.
+    // cancelHold checks ownership and makes retries of old releases harmless.
+    case "release": return cancelHold({ sessionId, holdId: action.holdId }, "EMPLOYEE");
     case "confirm": {
       if (!session.activeHoldId || session.activeHoldId !== action.holdId) throw new DomainError(ErrorCode.INVALID_STATE, "The held flight changed. Refresh, read it back, and obtain a new confirmation.");
       return confirmRebooking({ sessionId, holdId: session.activeHoldId, confirmed: action.confirmed, idempotencyKey: `employee:${sessionId}:confirm:${session.activeHoldId}` }, "EMPLOYEE");

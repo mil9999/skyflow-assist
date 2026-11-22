@@ -64,7 +64,7 @@ The voice endpoints require development mode and a loopback host, and reject for
 
 Open `/employee` in a second browser tab on the same local origin. Select a passenger to see saved messages, booking state, support cases, and audit activity. **Take over** blocks subsequent AI booking actions and opens a shared text conversation with the passenger. A voice session disconnects its AI transport when takeover is detected; employee assistance continues by text.
 
-Employees use the same backend identity, eligibility, inventory, and confirmation rules. Verify an unverified passenger before loading their booking. Read back the held flight and obtain an explicit yes before checking the confirmation box. Approval is tied to that exact hold; a replacement hold requires fresh confirmation. See [the employee walkthrough](docs/employee-workflow.md).
+Employees use the same backend identity, eligibility, inventory, and confirmation rules. Verify an unverified passenger before loading their booking. Read back the held flight and obtain an explicit yes before checking the confirmation box. Approval is tied to that exact hold; a replacement hold requires fresh confirmation. Releasing a seat also targets the displayed hold, so a delayed release cannot cancel a replacement selected in another window. See [the employee walkthrough](docs/employee-workflow.md).
 
 The workspace, shared transcript routes, and voice bridge are restricted to loopback development hosts and reject foreign browser origins. Employee login and hosted access controls are still required before deployment.
 
@@ -88,7 +88,7 @@ npm run lint
 npm run build
 ```
 
-There are 228 automated tests covering domain rules, transactional rebooking, authenticated tools, hold cancellation and expiry, persistent text and voice context, employee takeover, shared messages, scripted scenarios, and private connection-failure diagnostics. Recovery checks use separate Node processes. Tests apply the real migrations to a fresh temporary SQLite database and remove it afterward. They never reset the development database and never make live AI API calls.
+There are 230 automated tests covering domain rules, transactional rebooking, authenticated tools, hold cancellation and expiry, persistent text and voice context, employee takeover, shared messages, scripted scenarios, and private connection-failure diagnostics. Recovery checks use separate Node processes. Tests apply the real migrations to a fresh temporary SQLite database and remove it afterward. They never reset the development database and never make live AI API calls.
 
 Run `npm run eval:voice -- --offline` to rehearse the evaluation harness without AI calls. Opt into billable ElevenLabs checks with `npm run eval:voice -- --live --scenario rebooking --runs 1` (Node.js 22+). Every evaluation gets a disposable migrated database. The evaluator covers rebooking after an ambiguous answer, no alternatives, failed identity verification, expired-hold recovery, employee takeover, varied unclear approval, and declining a held flight. Reports capture the configured agent and reject configuration drift. The latest 14-case live batch recorded six passes and eight inconclusive connection failures; an isolated cancellation retry was also inconclusive. Repeated reliability and that new cancellation case remain unverified. See [evaluation commands, results, and limits](docs/voice-evaluation.md).
 

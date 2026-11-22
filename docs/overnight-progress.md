@@ -1,6 +1,6 @@
 # SkyFlow Assist development checkpoint
 
-Updated: 16 November 2026 (Europe/Paris overnight window). Repository: `mil9999/skyflow-assist` (public). Current work branch: `codex/complete-disruption-demo`.
+Updated: 22 November 2026 (Europe/Paris overnight window). Repository: `mil9999/skyflow-assist` (public). Current work branch: `codex/complete-disruption-demo`.
 
 ## Completed in the current milestone
 
@@ -86,11 +86,19 @@ The user explicitly requested a new one-hour work session after the overnight wi
 - One bounded live no-alternatives probe from clean source `76d6e17` was **inconclusive**: the SDK rejected startup with close code `3000` after 1.123 seconds; zero scenario steps ran. Agent configuration before/after matched the captured 13 November fingerprint. No recognized provider-status token was available, so the underlying cause remains undetermined. This is not a new behavioral pass. The [sanitized probe report](evaluations/2026-11-16-connection-probe.json) preserves the exact result separately from the incomplete 13 November matrix.
 - The diagnostics checkpoint was pushed to the existing draft PR branch. No remote prompt/model/call-limit change was made. Avoid repeated billable probes while this rejection is unchanged; inspect provider-side initiation alerts, request logs, and workspace usage before retrying the matrix. Continue independent work with mocked external services meanwhile.
 
+## Employee release retry safeguard (22 November)
+
+- Reproduced a delayed employee release cancelling the wrong seat: one window released SF218, another held SF224, and retrying the first release cancelled SF224 because the employee service substituted the session's latest hold.
+- Employee release requests now require the hold displayed when the action was taken. The client sends that target, and the existing transactional cancellation service checks ownership and releases only that hold. A repeated release of an already cancelled hold is harmless even after a replacement is selected; it cannot clear the replacement pointer, restore its inventory, or add another cancellation audit event.
+- Added regression checks for replacement inventory, active hold/state, one cancellation audit entry, subsequent explicit confirmation of the replacement, HTTP refusal of a release without a target, and repeated HTTP releases. Both new tests failed against the previous service before the fix.
+- Validation: **230 tests in 18 files pass**, lint and standalone TypeScript (`--noEmit --incremental false`) pass, and the production Webpack build passes with all 24 generated pages. Checks use disposable migrated databases and mocked providers. This change alters the release request, not the page layout; no new browser or spoken acceptance is claimed. No live ElevenLabs calls, dependency installs, migrations, saved-database resets, or remote agent changes were made.
+- Dependency maintenance remains open. The 19 November read-only fix preview proposed compatible `typescript-eslint` 8.73.0 / `minimatch` 11.0.9 and Next.js 16.4.6 updates. Its pre-install audit reported 11 package findings (3 high, 8 moderate), including the newly reported Next.js cache advisories [GHSA-mfr8-8qww-v76h](https://github.com/advisories/GHSA-mfr8-8qww-v76h) and [GHSA-vc7v-qv4w-wrv8](https://github.com/advisories/GHSA-vc7v-qv4w-wrv8). This was a preview, not a completed upgrade or a verified clean audit. A 22 November sandbox refresh failed to resolve the registry, and the escalated read-only refresh was interrupted. No new completed audit or dependency fix is claimed.
+
 ## Next concrete work
 
 1. Obtain provider-side diagnostics for the persistent pre-session WebSocket rejection (close code `3000`), then rerun the fixed seven-case matrix with repeated runs and configuration capture when there is evidence the connection issue has changed. The 16 November single probe still could not start; do not repeat billable probes solely because another scheduled wake fires. Approval/cancellation variants and private diagnostics are implemented. Preserve the incomplete reports; do not convert inconclusive cases into passes. The current environment has ElevenLabs credentials but no OpenAI text-model key; do not expose either. Keep live runs explicitly opt-in and reports free of credentials, signed URLs, airline IDs, and full transcripts.
 2. Validate microphone speech recognition, audio, interruptions, and spoken rebooking with the user. Microphone permission for the local voice page is still pending; no spoken acceptance is claimed. All five initial live text scenarios now pass once each.
-3. Address the remaining dependency findings in a separate verified change: compatible lint-chain updates, then a planned Prisma major migration with SQLite backup and migration/recovery checks. The 17 October audit below is historical; the 13 November audit above is the current recorded result.
+3. Apply and verify the compatible Next.js and lint-chain patches identified by the 19 November preview when registry access is available. Then plan the Prisma major migration with SQLite backup and migration/recovery checks. The audit history above records dates and distinguishes previews from completed installs; no forced major upgrade or override has been applied.
 4. Prepare employee login, passenger access controls, hosted storage and session handling, a production expiry scheduler, and dependency advisory remediation before any deployment. Real airline APIs, payments, refunds, compensation, and telephony remain outside the current demonstration.
 
 ## Persistent text conversation milestone (5 November)

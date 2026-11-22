@@ -60,13 +60,45 @@ describe("employee control", () => {
     const conversation = await held();
     await takeOver(conversation.sessionId);
     const oldHoldId = conversation.activeHoldId!;
-    await employeeAction(conversation.sessionId, { action: "release" });
+    await employeeAction(conversation.sessionId, { action: "release", holdId: oldHoldId });
     const replacement = await employeeAction(conversation.sessionId, { action: "hold", flightId: conversation.latestOptions[1].flightId }) as { holdId: string };
     await expect(employeeAction(conversation.sessionId, { action: "confirm", holdId: oldHoldId, confirmed: true })).rejects.toMatchObject({ code: "INVALID_STATE" });
     expect(await prisma.booking.findUniqueOrThrow({ where: { bookingReference: "SKY82Q" } })).toMatchObject({ status: "DISRUPTED" });
     expect(await prisma.conversationSession.findUniqueOrThrow({ where: { id: conversation.sessionId } })).toMatchObject({ activeHoldId: replacement.holdId });
     await employeeAction(conversation.sessionId, { action: "confirm", holdId: replacement.holdId, confirmed: true });
     expect((await employeeDetail(conversation.sessionId))?.booking?.flight).toBe("SF224");
+  });
+
+  it("keeps a replacement seat when an older employee release is delivered again", async () => {
+    const conversation = await held();
+    await takeOver(conversation.sessionId);
+    const oldHoldId = conversation.activeHoldId!;
+    await employeeAction(conversation.sessionId, { action: "release", holdId: oldHoldId });
+    const replacement = await employeeAction(conversation.sessionId, { action: "hold", flightId: conversation.latestOptions[1].flightId }) as { holdId: string };
+
+    expect(await employeeAction(conversation.sessionId, { action: "release", holdId: oldHoldId })).toMatchObject({ holdId: oldHoldId, seatReleased: false });
+    expect(await prisma.conversationSession.findUniqueOrThrow({ where: { id: conversation.sessionId } })).toMatchObject({ state: "AWAITING_CONFIRMATION", activeHoldId: replacement.holdId });
+    expect(await prisma.rebookingHold.findUniqueOrThrow({ where: { id: replacement.holdId } })).toMatchObject({ status: "ACTIVE" });
+    expect(await prisma.flight.findUniqueOrThrow({ where: { flightNumber: "SF218" } })).toMatchObject({ availableSeats: 17 });
+    expect(await prisma.flight.findUniqueOrThrow({ where: { flightNumber: "SF224" } })).toMatchObject({ availableSeats: 3 });
+    expect(await prisma.auditEvent.count({ where: { action: "HOLD_CANCELLED" } })).toBe(1);
+    await employeeAction(conversation.sessionId, { action: "confirm", holdId: replacement.holdId, confirmed: true });
+    expect((await employeeDetail(conversation.sessionId))?.booking?.flight).toBe("SF224");
+  });
+
+  it("requires an explicit hold on employee release requests and releases it only once", async () => {
+    const conversation = await held();
+    await takeOver(conversation.sessionId);
+    const missingHold = await actionRoute(request({ action: "release" }), context(conversation.sessionId));
+    expect(missingHold.status).toBe(400);
+    expect(await prisma.rebookingHold.findUniqueOrThrow({ where: { id: conversation.activeHoldId } })).toMatchObject({ status: "ACTIVE" });
+
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const response = await actionRoute(request({ action: "release", holdId: conversation.activeHoldId }), context(conversation.sessionId));
+      expect(response.status).toBe(200);
+    }
+    expect(await prisma.flight.findUniqueOrThrow({ where: { flightNumber: "SF218" } })).toMatchObject({ availableSeats: 17 });
+    expect(await prisma.auditEvent.count({ where: { action: "HOLD_CANCELLED" } })).toBe(1);
   });
 
   it("retains older text history when takeover adds the first shared transcript entry", async () => {
