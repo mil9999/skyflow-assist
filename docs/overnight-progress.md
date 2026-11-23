@@ -1,6 +1,6 @@
 # SkyFlow Assist development checkpoint
 
-Updated: 22 November 2026 (Europe/Paris overnight window). Repository: `mil9999/skyflow-assist` (public). Current work branch: `codex/complete-disruption-demo`.
+Updated: 23 November 2026 (Europe/Paris overnight window). Repository: `mil9999/skyflow-assist` (public). Current work branch: `codex/complete-disruption-demo`.
 
 ## Completed in the current milestone
 
@@ -94,11 +94,19 @@ The user explicitly requested a new one-hour work session after the overnight wi
 - Validation: **230 tests in 18 files pass**, lint and standalone TypeScript (`--noEmit --incremental false`) pass, and the production Webpack build passes with all 24 generated pages. Checks use disposable migrated databases and mocked providers. This change alters the release request, not the page layout; no new browser or spoken acceptance is claimed. No live ElevenLabs calls, dependency installs, migrations, saved-database resets, or remote agent changes were made.
 - Dependency maintenance remains open. The 19 November read-only fix preview proposed compatible `typescript-eslint` 8.73.0 / `minimatch` 11.0.9 and Next.js 16.4.6 updates. Its pre-install audit reported 11 package findings (3 high, 8 moderate), including the newly reported Next.js cache advisories [GHSA-mfr8-8qww-v76h](https://github.com/advisories/GHSA-mfr8-8qww-v76h) and [GHSA-vc7v-qv4w-wrv8](https://github.com/advisories/GHSA-vc7v-qv4w-wrv8). This was a preview, not a completed upgrade or a verified clean audit. A 22 November sandbox refresh failed to resolve the registry, and the escalated read-only refresh was interrupted. No new completed audit or dependency fix is claimed.
 
+## Dependency download failure and recovery (23 November)
+
+- The approved, time-bounded patch install ran during the Paris work window. The first attempt timed out downloading `@next/eslint-plugin-next` 16.4.6; one retry failed with a registry idle timeout. The follow-on lint update did not run. Lifecycle scripts were disabled and no major Prisma migration was attempted.
+- Tracked `package.json` and `package-lock.json` remained unchanged, but the interrupted retry had retired the working Next.js packages and left incomplete replacements in `node_modules`. No completed dependency upgrade or new audit result is claimed.
+- Restored the five original 16.4.2 packages (`next`, `@next/env`, `eslint-config-next`, `@next/eslint-plugin-next`, and the Darwin ARM64 SWC binary) and the Next CLI link from npm's retired copies, validating their versions against the unchanged lockfile before moving them. Incomplete replacements were preserved outside the checkout at `/private/tmp/skyflow-interrupted-install-h5m9m2pi`.
+- Recovery validation passed: **230 tests in 18 files**, lint, standalone TypeScript (`--noEmit --incremental false`), and the production Webpack build with 24 generated pages. The build reports Next.js **16.4.2**, confirming the restored version rather than the proposed patch. No new browser/audio acceptance, live model calls, migrations, or saved-database changes were performed.
+- Next dependency work should resolve and download the patches in an isolated checkout first, verify the complete installation there, and retain a working rollback before updating the interactive checkout. Avoid repeating the in-place install while registry downloads are failing. The Next.js/lint-chain advisories and the planned Prisma migration remain open; the historical audit and live evaluation reports are unchanged.
+
 ## Next concrete work
 
 1. Obtain provider-side diagnostics for the persistent pre-session WebSocket rejection (close code `3000`), then rerun the fixed seven-case matrix with repeated runs and configuration capture when there is evidence the connection issue has changed. The 16 November single probe still could not start; do not repeat billable probes solely because another scheduled wake fires. Approval/cancellation variants and private diagnostics are implemented. Preserve the incomplete reports; do not convert inconclusive cases into passes. The current environment has ElevenLabs credentials but no OpenAI text-model key; do not expose either. Keep live runs explicitly opt-in and reports free of credentials, signed URLs, airline IDs, and full transcripts.
 2. Validate microphone speech recognition, audio, interruptions, and spoken rebooking with the user. Microphone permission for the local voice page is still pending; no spoken acceptance is claimed. All five initial live text scenarios now pass once each.
-3. Apply and verify the compatible Next.js and lint-chain patches identified by the 19 November preview when registry access is available. Then plan the Prisma major migration with SQLite backup and migration/recovery checks. The audit history above records dates and distinguishes previews from completed installs; no forced major upgrade or override has been applied.
+3. Stage the compatible Next.js and lint-chain patches identified by the 19 November preview in an isolated checkout, with bounded downloads and verification before changing the interactive checkout. The 23 November in-place attempt was restored after registry timeouts; no patched install has passed validation yet. Then plan the Prisma major migration with SQLite backup and migration/recovery checks. No forced major upgrade or override has been applied.
 4. Prepare employee login, passenger access controls, hosted storage and session handling, a production expiry scheduler, and dependency advisory remediation before any deployment. Real airline APIs, payments, refunds, compensation, and telephony remain outside the current demonstration.
 
 ## Persistent text conversation milestone (5 November)
