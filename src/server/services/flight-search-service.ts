@@ -1,3 +1,4 @@
+import { assertSessionActor, type ServiceActor } from "./session-control";
 import { AuditAction } from "../../domain/constants";
 import { DomainError, ErrorCode } from "../../domain/errors";
 import { assertTransitionAllowed } from "../../domain/rebooking-state";
@@ -37,11 +38,12 @@ export function searchFloor(originalDeparture: Date, now: Date = new Date()): Da
   return new Date(Math.max(now.getTime(), originalDeparture.getTime()));
 }
 
-export async function searchAlternativeFlights(input: SearchInput): Promise<SearchResult> {
+export async function searchAlternativeFlights(input: SearchInput, actor: ServiceActor = "AI"): Promise<SearchResult> {
   const session = await sessionRepository.findById(prisma, input.sessionId);
   if (!session) {
     throw new DomainError(ErrorCode.INVALID_STATE, "Unknown session.");
   }
+  assertSessionActor(session, actor);
   // Repeat searches are allowed once options are on the table (the passenger may
   // narrow the criteria), but the booking must have been loaded first.
   if (session.state !== "BOOKING_LOADED" && session.state !== "OPTIONS_PRESENTED") {
@@ -103,7 +105,7 @@ export async function searchAlternativeFlights(input: SearchInput): Promise<Sear
 
   if (session.state !== "OPTIONS_PRESENTED") {
     assertTransitionAllowed(session.state, "OPTIONS_PRESENTED");
-    await sessionRepository.transition(prisma, session.id, "OPTIONS_PRESENTED");
+    await sessionRepository.transition(prisma, session.id, "OPTIONS_PRESENTED", {}, actor);
   }
 
   await auditService.record(prisma, session.id, AuditAction.ALTERNATIVES_SEARCHED, {

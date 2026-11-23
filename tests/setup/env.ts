@@ -1,8 +1,8 @@
-/**
- * Runs before any test file is imported, so the Prisma client is constructed
- * against test.db rather than your development database.
- */
-process.env.DATABASE_URL = `file:${process.cwd()}/prisma/test.db`;
+import { inject } from "vitest";
+
+// Global setup owns this new temporary database; an inherited DATABASE_URL can
+// never direct a test's fixture cleanup at the developer's database.
+process.env.DATABASE_URL = inject("testDatabaseUrl");
 
 /** Not a real secret — the routes only need *a* key to compare against. */
 process.env.TOOLS_API_KEY = "test-tools-api-key";

@@ -9,6 +9,7 @@ export interface StoredFlightOption {
   arrivalTime: string;
   connections: number;
   availableSeats: number;
+  additionalCost: number;
 }
 
 export interface ConversationMessage {
@@ -41,6 +42,8 @@ export interface SimulatorConversation {
   latestOptions: StoredFlightOption[];
   activeHoldId?: string;
   confirmationIdempotencyKey?: string;
+  /** Optimistic version of the completed text checkpoint; unused by voice. */
+  checkpointVersion?: number;
   createdAt: Date;
 }
 

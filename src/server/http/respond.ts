@@ -11,6 +11,8 @@ export const STATUS_BY_CODE: Record<string, number> = {
   [ErrorCode.NO_ALTERNATIVES]: 409,
   [ErrorCode.FLIGHT_UNAVAILABLE]: 409,
   [ErrorCode.INVALID_STATE]: 409,
+  [ErrorCode.SESSION_TAKEN_OVER]: 409,
+  [ErrorCode.TAKEOVER_REQUIRED]: 409,
   [ErrorCode.ALREADY_REBOOKED]: 409,
   [ErrorCode.IDEMPOTENCY_MISMATCH]: 409,
   [ErrorCode.HOLD_EXPIRED]: 410,

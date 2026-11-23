@@ -7,6 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "setup:demo": "node scripts/setup-demo.mjs",
+    "setup:voice": "tsx scripts/setup-voice.ts",
+    "holds:expire": "node --import tsx scripts/expire-holds.ts",
+    "eval:voice": "node scripts/evaluate-voice.mjs",
     "test": "vitest run",
     "seed": "prisma db seed",
     "studio": "prisma studio"
@@ -15,12 +19,15 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@elevenlabs/client": "^1.28.0",
+    "@elevenlabs/react": "^1.18.0",
+    "@next/env": "16.4.2",
     "@prisma/client": "^6.19.3",
-    "next": "16.2.11",
+    "next": "^16.4.2",
     "openai": "^7.4.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "zod": "^4.4.3"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -28,7 +35,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.11",
+    "eslint-config-next": "^16.4.2",
     "prisma": "^6.19.3",
     "tailwindcss": "^4",
     "tsx": "^4.23.1",

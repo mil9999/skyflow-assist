@@ -5,9 +5,10 @@ import {
   type ModelProvider,
 } from "@/server/llm/provider";
 import { redact } from "./redact";
+import { beginConversationTurn, completeConversationTurn } from "./conversation-store";
 import { SYSTEM_PROMPT } from "./system-prompt";
 import { AGENT_TOOLS } from "./tool-definitions";
-import { executeTool, getSessionState } from "./tool-executor";
+import { executeTool, getSessionState, getSessionStatus } from "./tool-executor";
 import type { SimulatorConversation, TraceStep } from "./types";
 
 export const MAX_STEPS = 6;
@@ -26,7 +27,8 @@ export type StopReason =
   | "COMPLETED"
   | "STEP_LIMIT"
   | "PROVIDER_CONFIGURATION"
-  | "PROVIDER_ERROR";
+  | "PROVIDER_ERROR"
+  | "EMPLOYEE_TAKEOVER";
 
 export interface RunTurnResult {
   assistantMessage: string;
@@ -44,6 +46,13 @@ const APOLOGY =
  * text or we hit the step ceiling.
  */
 export async function runTurn(options: RunTurnOptions): Promise<RunTurnResult> {
+  await beginConversationTurn(options.conversation);
+  const result = await runLockedTurn(options);
+  const takenOver = await completeConversationTurn(options.conversation);
+  return takenOver ? { ...result, assistantMessage: "", stopReason: "EMPLOYEE_TAKEOVER" } : result;
+}
+
+async function runLockedTurn(options: RunTurnOptions): Promise<RunTurnResult> {
   const { conversation, userMessage, provider, model } = options;
   const maxSteps = options.maxSteps ?? MAX_STEPS;
   const trace: TraceStep[] = [];
@@ -62,6 +71,10 @@ export async function runTurn(options: RunTurnOptions): Promise<RunTurnResult> {
   let configurationError: string | undefined;
 
   for (let step = 0; step < maxSteps; step += 1) {
+    if ((await getSessionStatus(conversation.sessionId))?.controller === "EMPLOYEE") {
+      stopReason = "EMPLOYEE_TAKEOVER";
+      break;
+    }
     const modelStartedAt = new Date();
     let response;
 
@@ -75,6 +88,7 @@ export async function runTurn(options: RunTurnOptions): Promise<RunTurnResult> {
         timeoutMs: options.timeoutMs,
       });
     } catch (error) {
+      if ((await getSessionStatus(conversation.sessionId))?.controller === "EMPLOYEE") { stopReason = "EMPLOYEE_TAKEOVER"; break; }
       const isConfiguration = error instanceof ProviderConfigurationError;
       const isProvider = error instanceof ProviderRequestError;
 
@@ -100,6 +114,11 @@ export async function runTurn(options: RunTurnOptions): Promise<RunTurnResult> {
       await safelyEscalate(conversation, trace, isProvider ? "BACKEND_ERROR" : "BACKEND_ERROR");
       assistantMessage = APOLOGY;
       stopReason = "PROVIDER_ERROR";
+      break;
+    }
+
+    if ((await getSessionStatus(conversation.sessionId))?.controller === "EMPLOYEE") {
+      stopReason = "EMPLOYEE_TAKEOVER";
       break;
     }
 
